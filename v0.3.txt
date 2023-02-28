@@ -1,0 +1,4 @@
+Added two different modes (editmode and playmode)
+Added menu for playmode
+Added neighbors functions that returns all neighboring tiles of given tile (covers edgecases, literally)
+In playmode, clicking on a tile colours all its neighbors, showcasing the function. Only for testing

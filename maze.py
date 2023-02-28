@@ -26,10 +26,16 @@ screen =  pygame.display.set_mode([1024+64,1024])
 bgcolor = (163,163,163)
 
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64
-gridsize = 16
-matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
+#Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
+#The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
+gridsize = 32
 
+matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
+#Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
+
+#width and height of a single tile, including the 2px border on each side
 tiles = 1024 / gridsize
+#width and height of a single tile, minus the 2px border on each side. 2 sides, so 2px + 2px = 4px
 tilewidth = tiles - 4
 
 #0-> build mode, 1 -> pathfind mode
@@ -47,10 +53,10 @@ goallocation = [-1,-1]
 
 #Image Loader
 saveimg = pygame.transform.scale(pygame.image.load("save.png"), (64,64))
-savebutton = Button(saveimg, 1024, 0)
+savebutton = Button(saveimg, 1024, 64)
 
 loadimg = pygame.transform.scale(pygame.image.load("load.png"), (64,64))
-loadbutton = Button(loadimg, 1024, 64)
+loadbutton = Button(loadimg, 1024, 128)
 
 goalimg = pygame.image.load("goal.png")
 grid_goalimg = pygame.transform.scale(goalimg, (int(tilewidth),int(tilewidth)))
@@ -64,7 +70,75 @@ wallimg = pygame.transform.scale(pygame.image.load("wall.png"), (64,64))
 wallbutton = Button(wallimg, 1024, 832)
 
 trashimg = pygame.transform.scale(pygame.image.load("trash.png"), (64,64))
-trashbutton = Button(trashimg, 1024,128)
+trashbutton = Button(trashimg, 1024,192)
+
+playimg = pygame.transform.scale(pygame.image.load("play.png"), (64,64))
+playbutton = Button(playimg, 1024, 64)
+
+playmodeimg = pygame.transform.scale(pygame.image.load("playmode.png"), (64,64))
+playmodebutton = Button(playmodeimg,1024, 0)
+
+editmodeimg = pygame.transform.scale(pygame.image.load("editmode.png"), (64,64))
+editmodebutton = Button(editmodeimg,1024, 0)
+
+def get_neighbors(s):
+    #will never happen, since start and goal dont fit in one tile
+    if gridsize == 1:
+        return []
+
+    #left edge
+    elif s[0] == 0:
+        #left upper corner
+        if s[1] == 0:
+            return [(1,0),(0,1)]
+        #left lower corner
+        elif s[1] == (gridsize - 1):
+            return [(0,gridsize-2), (1,gridsize-1)]
+        #left edge
+        else:
+            return [(0,s[1]-1),(1,s[1]),(0,s[1]+1)]
+    
+    #right edge
+    elif s[0] == (gridsize -1):
+        #right upper corner
+        if s[1] == 0:
+            return [(gridsize-1,1),(gridsize-2,0)]
+        #right lower corner
+        elif s[1] == (gridsize - 1):
+            return [(gridsize-1,gridsize-2), (gridsize-2,gridsize-1)]
+        #right edge
+        else:
+            return [(gridsize-1,s[1]-1),(gridsize-1,s[1]+1),(gridsize-2,s[1])]
+
+    #upper edge (corner already covered)
+    elif s[1] == 0:
+        return [(s[0]+1,0),(s[0],1),(s[0]-1,0)]
+
+    #lower edge
+    elif s[1] == (gridsize -1):
+        return [(s[0], gridsize -2),(s[0]+1,gridsize-1),(s[0]-1,gridsize-1)]
+    
+    #middle tile
+    else:
+        return [(s[0],s[1]-1),(s[0]+1,s[1]),(s[0],s[1]+1),(s[0]-1,s[1])]
+
+def dfs(visited_tiles,s,g,path):
+    #s = (x,y)
+    
+    visited_tiles.append(s)
+    if s == g:
+        path.append(s)
+        return
+    
+    #linker rand
+    if s[0] == 0:
+        #linke obere ecke
+        if s[1] == 0:
+            pass
+
+
+    
+
 
 
 #TODO Laoding a saved 16x16 grid on a 32x32 grid crashes the game because the matrix is too small. Can be fixed by saving specific sizes
@@ -79,30 +153,36 @@ def load_saved_level():
     pickle_in.close()
     return matrix
 
+def removestart():
+    global startplaced, startlocation
+    startplaced = False
+    startlocation = [-1,-1]
+
+def removegoal():
+    global goalplaced, goallocation
+    goalplaced = False
+    goallocation = [-1,-1]
+
 def cleargrid():
     global startplaced, goalplaced, startlocation, goallocation
     for x in range(gridsize):
         for y in range(gridsize):
             matrix[x][y] = 0
-    startplaced = False
-    startlocation = [-1,-1]
-    goalplaced = False
-    goallocation = [-1,-1]
+    removestart()
+    removegoal()
+
 def addblock(selected_tile, selected_block):
     global startplaced, goalplaced, startlocation, goallocation
     if selected_block == 1:
         if selected_tile == startlocation:
-            startplaced = False
-            startlocation = [-1,-1]
+            removestart()
         elif selected_tile == goallocation:
-            goalplaced = False
-            goallocation = [-1,-1]
+            removegoal()
         matrix[selected_tile[0]][selected_tile[1]] = selected_block
 
     elif selected_block == 2:
         if selected_tile == goallocation:
-            goalplaced = False
-            goallocation = [-1,-1]
+            removegoal()
         if startplaced:
             matrix[startlocation[0]][startlocation[1]] = 0
             matrix[selected_tile[0]][selected_tile[1]] = selected_block
@@ -114,8 +194,7 @@ def addblock(selected_tile, selected_block):
 
     elif selected_block == 3:
         if selected_tile == startlocation:
-            startplaced = False
-            startlocation = [-1,-1]
+            removestart()
         if goalplaced:
             matrix[goallocation[0]][goallocation[1]] = 0
             matrix[selected_tile[0]][selected_tile[1]] = selected_block      
@@ -128,11 +207,9 @@ def addblock(selected_tile, selected_block):
 def removewall(selected_tile):
     global startplaced, goalplaced, startlocation, goallocation
     if selected_tile == startlocation:
-        startplaced = False
-        startlocation = [-1,-1]
+        removestart()
     elif selected_tile == goallocation:
-        goalplaced = False
-        goallocation = [-1,-1]
+        removegoal()
     matrix[selected_tile[0]][selected_tile[1]] = 0
 
 def draw():
@@ -140,6 +217,7 @@ def draw():
     screen.fill(bgcolor)
     
     if gamemode == 0:
+        playmodebutton.draw(screen)
         savebutton.draw(screen)
         loadbutton.draw(screen)
         goalbutton.draw(screen)
@@ -148,7 +226,8 @@ def draw():
         trashbutton.draw(screen)
     
     elif gamemode == 1:
-        pass
+        editmodebutton.draw(screen)
+        playbutton.draw(screen)
     #pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
     #pygame.draw.rect(screen, (109,162,255), (1088-4,0,4,1024))
     
@@ -203,7 +282,7 @@ while go:
                         addblock(clicked_tile, selected_block)
                     
                     elif mousebutton == 2:
-                        matrix[clicked_tile[0]][clicked_tile[1]] = 3
+                        pass
 
                     elif mousebutton == 3:
                         right_mouse_clicked = True
@@ -211,7 +290,10 @@ while go:
 
                 #mouse on sidebar
                 else:
-                    if savebutton.rect.collidepoint(event.pos):
+                    if playmodebutton.rect.collidepoint(event.pos):
+                        gamemode = 1
+
+                    elif savebutton.rect.collidepoint(event.pos):
                         save_current_level()
                     elif loadbutton.rect.collidepoint(event.pos):
                         matrix = load_saved_level()
@@ -244,9 +326,40 @@ while go:
                         addblock(clicked_tile,selected_block)  
                     elif right_mouse_clicked:
                         removewall(clicked_tile)  
-                        
+
+
+    #Algo mopde                    
+    elif gamemode == 1:        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
             
-    
+            if event.type == pygame.MOUSEBUTTONDOWN:	
+                mousepos = event.pos
+                mousebutton = event.button
+                #mouse on grid
+                if mousepos[0] < 1024 and mousepos[1] < 1024:
+                    
+                    clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
+                    
+                    #left click
+                    if mousebutton == 1:
+                        neighbors = get_neighbors(clicked_tile)
+                        #If mouse doesnt move while clicking, MOUSEMOTION isnt triggerd. Thats why the matrix needs to be adjusted here
+                        for neighbor in neighbors:
+                            addblock(neighbor, 1)
+                    
+                #mouse on sidebar
+                else:
+                    if editmodebutton.rect.collidepoint(event.pos):
+                        gamemode = 0
+
+                    elif playbutton.rect.collidepoint(event.pos):
+                        if startplaced and goalplaced:
+                            print("OK")
+                        else:
+                            print("NO")
+                  
     draw()	
     pygame.display.update()
     clock.tick(120)
