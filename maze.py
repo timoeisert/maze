@@ -61,7 +61,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 32
+gridsize = 16
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -73,6 +73,7 @@ tilewidth = tiles - 4
 
 #0-> build mode, 1 -> pathfind mode
 gamemode = 0
+selected_algorithm = 3
 left_mouse_clicked = False
 right_mouse_clicked = False
 
@@ -126,7 +127,8 @@ popup1 = Popup(512,128,400,265,crossimg,False)
 
 
 
-
+stack_global = []
+visited_tiles_global = {}
 
 
 
@@ -293,6 +295,31 @@ def iterative_dfs(visited_tiles,s,g):
                     stack.append([neighbor,v[0]])
                     
     	    """
+
+
+def dfs_step(stack,visited_tiles,g):
+    if stack:
+
+        v = stack.pop(-1)
+        visited_tiles[v[0]] = v[1]
+
+        if v[0] == g:
+            
+            return stack, visited_tiles, True
+        
+        #List of tuples (x,y) of coordinates
+        tileneighbors = get_neighbors(v[0])
+        tileneighbors.reverse()
+        #Iterates through each neighbor
+        for neighbor in tileneighbors:
+            if matrix[neighbor[0]][neighbor[1]] != 1:
+                if not neighbor in visited_tiles.keys():
+                    stack.append((neighbor,v[0]))
+
+        return stack, visited_tiles, False
+    else:
+        return stack, visited_tiles, False
+    
 
 
 
@@ -465,8 +492,8 @@ def draw():
 
 
 
-
-
+algo_started = False
+finished = False
 #GAME LOOP
 
 go = True
@@ -597,52 +624,79 @@ while go:
 
                     elif playbutton.rect.collidepoint(event.pos):
                         if startplaced and goalplaced:
-                            path = []
-                            
-                            pathfound = False
-                            visited_tiles, pathfound =iterative_dfs2(startlocation,goallocation)
-                            if pathfound:
-                                #Tuple of coordinates(x,y)
-                                currentnode = goallocation
-                                while True:
-                                    if visited_tiles.get(currentnode) == None:
-                                        path.append(currentnode)
-                                        break
-                                    
-                                    path.append(currentnode)
-                                    currentnode = visited_tiles.get(currentnode)
+                            if selected_algorithm == 0:
+                                path = []
                                 
-                            for visitedtile in visited_tiles.keys():
-                                addblock(visitedtile, 4)
-                            
-                            for foundtile in path:
-                                addblock(foundtile, 5)
-
-                            """
-                            path = []
-                            visited_tiles = []
-                            pathfound = False
-                            visited_tiles, pathfound = iterative_dfs(visited_tiles,startlocation,goallocation)
-                            if pathfound:
-                                currentnode = visited_tiles[-1]
-                                while True:
-                                    if currentnode.get_parent() == None:
-                                        path.append(currentnode.get_coords())
-                                        break
-                                    path.append(currentnode.get_coords())
-                                    currentnode = currentnode.get_parent()
-
+                                pathfound = False
+                                visited_tiles, pathfound =iterative_dfs2(startlocation,goallocation)
+                                if pathfound:
+                                    #Tuple of coordinates(x,y)
+                                    currentnode = goallocation
+                                    while True:
+                                        if visited_tiles.get(currentnode) == None:
+                                            path.append(currentnode)
+                                            break
+                                        
+                                        path.append(currentnode)
+                                        currentnode = visited_tiles.get(currentnode)
                                     
+                                for visitedtile in visited_tiles.keys():
+                                    addblock(visitedtile, 4)
+                                
+                                for foundtile in path:
+                                    addblock(foundtile, 5)
 
-                            
-                            
-                            for visitedtile in visited_tiles:
-                                addblock(visitedtile.get_coords(), 4)
-                            
+                            elif selected_algorithm == 1:
+                                    
+                                visited_tiles = []
+                                foundpath = []
+                                visited_tiles = dfs(visited_tiles,startlocation,goallocation,foundpath)
+                                print(foundpath)
+                                print(visited_tiles)
+                                for visitedtile in visited_tiles:
+                                    addblock(visitedtile, 4)
+                                for foundtile in foundpath:
+                                    addblock(foundtile, 5)
 
-                            for foundtile in path:
-                                addblock(foundtile, 5)
-                            """
+                            elif selected_algorithm == 2:
+                                    
+                                path = []
+                                visited_tiles = []
+                                pathfound = False
+                                visited_tiles, pathfound = iterative_dfs(visited_tiles,startlocation,goallocation)
+                                if pathfound:
+                                    currentnode = visited_tiles[-1]
+                                    while True:
+                                        if currentnode.get_parent() == None:
+                                            path.append(currentnode.get_coords())
+                                            break
+                                        path.append(currentnode.get_coords())
+                                        currentnode = currentnode.get_parent()
+
+                                        
+
+                                
+                                
+                                for visitedtile in visited_tiles:
+                                    addblock(visitedtile.get_coords(), 4)
+                                
+
+                                for foundtile in path:
+                                    addblock(foundtile, 5)
+                            
+                            elif selected_algorithm == 3:
+                                if not finished:
+                                    if algo_started == False:
+                                        stack_global.append((startlocation,None))
+                                        algo_started = True
+                                        stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
+
+                                    else:
+                                        stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
+
+                                    for visitedtile in visited_tiles_global.keys():
+                                        addblock(visitedtile, 4)
+                                
                         else:
                             print("NO")
                   
