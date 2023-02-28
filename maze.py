@@ -420,8 +420,15 @@ def removewall(selected_tile):
 
 
 
+def drawselectionbox(selected):
+    #Upper bar
+    pygame.draw.rect(screen, (210,210,210), (1024,1024-(selected*64),64,3))
+    #Lower bar
+    pygame.draw.rect(screen, (210,210,210), (1024,1024-((selected-1)*64)-3,64,3))
+    #Left bar
+    pygame.draw.rect(screen, (210,210,210), (1024,1024-(selected*64),3,64))
 
-
+    pygame.draw.rect(screen, (210,210,210), (1085,1024-(selected*64),3,64))
 
 
 
@@ -439,7 +446,7 @@ def draw():
         startbutton.draw(screen)
         wallbutton.draw(screen)
         trashbutton.draw(screen)
-       
+        drawselectionbox(4-selected_block)
 
     elif gamemode == 1:
         editmodebutton.draw(screen)
