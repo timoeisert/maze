@@ -1,0 +1,10 @@
+Added functioning DFS implementation, that shows the taken path and all visited tiles
+Edit:
+The DFS was implemented recursively, which turns out to be a problem at larger gridsizes. Python crashes after about
+(very roughly) 600 recursive calls. (Stackoverflow said about a 1000 calls)
+
+Error Message:
+Fatal Python error: _Py_CheckRecursiveCall: Cannot recover from stack overflow.
+Python runtime state: initialized
+
+To fix this, I will probably have to implement the algorithm iteratively

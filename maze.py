@@ -2,6 +2,7 @@ import pygame
 import sys
 import math
 import pickle
+import copy
 
 class Button:
 	def __init__(self, image, xpos, ypos):
@@ -28,7 +29,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 32
+gridsize = 16
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -49,6 +50,10 @@ startplaced = False
 startlocation = [-1,-1]
 goalplaced = False
 goallocation = [-1,-1]
+
+foundpath = []
+backupmatrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
+
 
 
 #Image Loader
@@ -130,12 +135,16 @@ def dfs(visited_tiles,s,g,path):
         path.append(s)
         return
     
-    #linker rand
-    if s[0] == 0:
-        #linke obere ecke
-        if s[1] == 0:
-            pass
+    tileneighbors = get_neighbors(s)
+    print(tileneighbors)
+    for neighbor in tileneighbors:
+        if matrix[neighbor[0]][neighbor[1]] != 1 and neighbor not in visited_tiles:
+            if g not in path:
+                dfs(visited_tiles,neighbor,g,path)
 
+        if neighbor in path:
+            path.append(s)
+            return visited_tiles    
 
     
 
@@ -204,6 +213,15 @@ def addblock(selected_tile, selected_block):
             matrix[selected_tile[0]][selected_tile[1]] = selected_block
             goallocation = selected_tile
 
+    elif selected_block == 4:
+        if not (selected_tile == goallocation) and not (selected_tile == startlocation):
+            matrix[selected_tile[0]][selected_tile[1]] = selected_block
+
+    elif selected_block == 5:
+        if not (selected_tile == goallocation) and not (selected_tile == startlocation):
+            matrix[selected_tile[0]][selected_tile[1]] = selected_block        
+
+
 def removewall(selected_tile):
     global startplaced, goalplaced, startlocation, goallocation
     if selected_tile == startlocation:
@@ -252,6 +270,12 @@ def draw():
             #Goal
             elif matrix[x][y] == 3:
                 screen.blit(grid_goalimg, [(2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y)])
+            
+            elif matrix[x][y] == 4:
+                pygame.draw.rect(screen, (0,100,0), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
+            
+            elif matrix[x][y] == 5:
+                pygame.draw.rect(screen, (0,200,0), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
                 
                 
 
@@ -259,7 +283,7 @@ def draw():
 
 go = True
 while go:
-
+    
     #Build mode
     if gamemode == 0:
                 
@@ -291,12 +315,21 @@ while go:
                 #mouse on sidebar
                 else:
                     if playmodebutton.rect.collidepoint(event.pos):
+                        backupmatrix = copy.deepcopy(matrix)
                         gamemode = 1
 
                     elif savebutton.rect.collidepoint(event.pos):
                         save_current_level()
                     elif loadbutton.rect.collidepoint(event.pos):
                         matrix = load_saved_level()
+                        for x in range(gridsize):
+                            for y in range(gridsize):
+                                if matrix[x][y] == 2:
+                                    startplaced = True
+                                    startlocation = (x,y)
+                                elif matrix[x][y] == 3:
+                                    goalplaced = True
+                                    goallocation = (x,y)
                     elif wallbutton.rect.collidepoint(event.pos):
                         selected_block = 1
                     elif startbutton.rect.collidepoint(event.pos):
@@ -352,11 +385,22 @@ while go:
                 #mouse on sidebar
                 else:
                     if editmodebutton.rect.collidepoint(event.pos):
+                        
+                        matrix = copy.deepcopy(backupmatrix)
                         gamemode = 0
 
                     elif playbutton.rect.collidepoint(event.pos):
                         if startplaced and goalplaced:
-                            print("OK")
+                            
+                            visited_tiles = []
+                            foundpath = []
+                            visited_tiles = dfs(visited_tiles,startlocation,goallocation,foundpath)
+                            print(foundpath)
+                            print(visited_tiles)
+                            for visitedtile in visited_tiles:
+                                addblock(visitedtile, 4)
+                            for foundtile in foundpath:
+                                addblock(foundtile, 5)
                         else:
                             print("NO")
                   
