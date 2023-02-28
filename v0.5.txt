@@ -1,0 +1,5 @@
+-Added basic popup that can be close by clicking on x button
+-Added iterative implementation of dfs by using a node class that has coordinates and a parent node
+ Class implementation really slow because a new object has to be generated for each tile
+-Added iterative implementation of dfs by using a dict that maps the current tile on the parent tile
+ This implementation is really fast (probably max) and finishes in less than a second in worst case 128x128

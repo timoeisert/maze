@@ -13,6 +13,38 @@ class Button:
 	def draw(self,screen):
 		screen.blit(self.image, self.rect)
 
+class Popup:
+    def __init__(self,xpos,ypos,length,height,crossimg,active):
+        self.rect = pygame.Rect(xpos,ypos,length,height)
+        self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
+        self.active = active
+    def activate(self):
+        self.active = True
+    def deactivate(self):
+        self.active = False
+    def get_active(self):
+        return self.active
+    def get_quitbutton(self):
+        return self.quitbutton
+    def draw(self,screen):
+        pygame.draw.rect(screen,(100,0,0),self.rect)
+        self.quitbutton.draw(screen)
+
+class Node:
+    def __init__(self,coordinates,parent):
+        self.coordinates = coordinates
+        self.parent = parent
+    def get_parent(self):
+        return self.parent
+    def get_coords(self):
+        return self.coordinates
+
+
+
+
+
+
+
 
 
 #General setup
@@ -26,10 +58,10 @@ screen =  pygame.display.set_mode([1024+64,1024])
 #Level setup
 bgcolor = (163,163,163)
 
-#Height and width of the grid (Needs to be 2^x). Reccomended max:64
+#Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 16
+gridsize = 32
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -85,6 +117,26 @@ playmodebutton = Button(playmodeimg,1024, 0)
 
 editmodeimg = pygame.transform.scale(pygame.image.load("editmode.png"), (64,64))
 editmodebutton = Button(editmodeimg,1024, 0)
+
+crossimg = pygame.transform.scale(pygame.image.load("cross.png"),(32,32))
+popup1 = Popup(512,128,400,265,crossimg,False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def get_neighbors(s):
     #will never happen, since start and goal dont fit in one tile
@@ -147,6 +199,113 @@ def dfs(visited_tiles,s,g,path):
             return visited_tiles    
 
     
+def iterative_dfs2(s,g):
+    stack = []
+    visited_tiles = {}
+
+    stack.append((s,None))
+
+    while stack:
+        v = stack.pop(-1)
+        visited_tiles[v[0]] = v[1]
+
+        if v[0] == g:
+            
+            return visited_tiles, True
+        
+        #List of tuples (x,y) of coordinates
+        tileneighbors = get_neighbors(v[0])
+        tileneighbors.reverse()
+        #Iterates through each neighbor
+        for neighbor in tileneighbors:
+            if matrix[neighbor[0]][neighbor[1]] != 1:
+                if not neighbor in visited_tiles.keys():
+                    stack.append((neighbor,v[0]))
+    
+    return visited_tiles, False
+
+def iterative_dfs(visited_tiles,s,g):
+    stack = []
+
+    stack.append(Node(s,None))
+    
+    while stack:
+        
+        v = stack.pop(-1)
+        visited_tiles.append(v)
+
+        if v.get_coords() == g:
+            
+            return visited_tiles, True
+        
+        tileneighbors = get_neighbors(v.get_coords())
+        tileneighbors.reverse()
+        for neighbor in tileneighbors:
+            if matrix[neighbor[0]][neighbor[1]] != 1:
+                if not neighbor in list(tiles.get_coords() for tiles in visited_tiles):
+                    stack.append(Node(neighbor,v))
+    
+    
+    return visited_tiles, False
+    """
+    print("before",stack)
+
+    v = stack.pop(-1)
+    print("after",stack)
+    visited_tiles.append(v)
+    tileneighbors = get_neighbors(v[0])
+    print(tileneighbors)
+    for neighbor in tileneighbors:
+        if matrix[neighbor[0]][neighbor[1]] != 1:
+            if not neighbor in list(tiles[0] for tiles in visited_tiles):
+                stack.append([neighbor,v[0]])
+    
+    print("stack",stack)
+
+    v = stack.pop(-1)
+    print("after",stack)
+    visited_tiles.append(v)
+    tileneighbors = get_neighbors(v[0])
+    print(tileneighbors)
+    for neighbor in tileneighbors:
+        if matrix[neighbor[0]][neighbor[1]] != 1:
+            if not neighbor in list(tiles[0] for tiles in visited_tiles):
+                stack.append([neighbor,v[0]])
+
+    print("stackend",stack)      
+    return visited_tiles
+    """
+    """
+    while stack:
+        print(stack)
+        v = stack.pop(-1)
+        visited_tiles.append(v)
+
+        #if goal is found, return visited_tiles
+        if v[0] == g:
+            return visited_tiles
+        
+        #iterates through all neighbors who arent a wall and arent visited yet
+        tileneighbors = get_neighbors(v[0])
+        for neighbor in tileneighbors:
+            if matrix[neighbor[0]][neighbor[1]] != 1:
+                if not any(neighbor in tiles[0] for tiles in visited_tiles):
+                    stack.append([neighbor,v[0]])
+                    
+    	    """
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -230,6 +389,17 @@ def removewall(selected_tile):
         removegoal()
     matrix[selected_tile[0]][selected_tile[1]] = 0
 
+
+
+
+
+
+
+
+
+
+#DRAW FUNTION
+
 def draw():
     #Background
     screen.fill(bgcolor)
@@ -242,7 +412,8 @@ def draw():
         startbutton.draw(screen)
         wallbutton.draw(screen)
         trashbutton.draw(screen)
-    
+       
+
     elif gamemode == 1:
         editmodebutton.draw(screen)
         playbutton.draw(screen)
@@ -277,9 +448,26 @@ def draw():
             elif matrix[x][y] == 5:
                 pygame.draw.rect(screen, (0,200,0), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
                 
-                
+    if popup1.get_active() == True:         
+        popup1.draw(screen)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#GAME LOOP
 
 go = True
 while go:
@@ -294,51 +482,69 @@ while go:
             if event.type == pygame.MOUSEBUTTONDOWN:	
                 mousepos = event.pos
                 mousebutton = event.button
-                #mouse on grid
-                if mousepos[0] < 1024 and mousepos[1] < 1024:
-                
-                    clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
-                    
-                    #left click
+
+                #Wenn popup aktiv:
+                if popup1.get_active():
                     if mousebutton == 1:
-                        left_mouse_clicked = True
-                        #If mouse doesnt move while clicking, MOUSEMOTION isnt triggerd. Thats why the matrix needs to be adjusted here
-                        addblock(clicked_tile, selected_block)
-                    
-                    elif mousebutton == 2:
-                        pass
+                        if popup1.get_quitbutton().rect.collidepoint(event.pos):
+                            
+                            popup1.deactivate()
+                        
+                        elif popup1.rect.collidepoint(event.pos):
 
-                    elif mousebutton == 3:
-                        right_mouse_clicked = True
-                        removewall(clicked_tile)
-
-                #mouse on sidebar
+                            cleargrid()
+                            popup1.deactivate()
+                
+                #Wenn popup nicht aktiv:
                 else:
-                    if playmodebutton.rect.collidepoint(event.pos):
-                        backupmatrix = copy.deepcopy(matrix)
-                        gamemode = 1
+                    #mouse on grid
+                    if mousepos[0] < 1024 and mousepos[1] < 1024:
+                    
+                        clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
+                        
+                        #left click
+                        if mousebutton == 1:
+                        
+                            
+                            left_mouse_clicked = True
+                            #If mouse doesnt move while clicking, MOUSEMOTION isnt triggerd. Thats why the matrix needs to be adjusted here
+                            addblock(clicked_tile, selected_block)
+                            
+                        elif mousebutton == 2:
+                            pass
 
-                    elif savebutton.rect.collidepoint(event.pos):
-                        save_current_level()
-                    elif loadbutton.rect.collidepoint(event.pos):
-                        matrix = load_saved_level()
-                        for x in range(gridsize):
-                            for y in range(gridsize):
-                                if matrix[x][y] == 2:
-                                    startplaced = True
-                                    startlocation = (x,y)
-                                elif matrix[x][y] == 3:
-                                    goalplaced = True
-                                    goallocation = (x,y)
-                    elif wallbutton.rect.collidepoint(event.pos):
-                        selected_block = 1
-                    elif startbutton.rect.collidepoint(event.pos):
-                        selected_block = 2
-                    elif goalbutton.rect.collidepoint(event.pos):
-                        selected_block = 3
-                    elif trashbutton.rect.collidepoint(event.pos):
-                        cleargrid()
-            
+                        elif mousebutton == 3:
+                            right_mouse_clicked = True
+                            removewall(clicked_tile)
+
+                    #mouse on sidebar
+                    else:
+                        if playmodebutton.rect.collidepoint(event.pos):
+                            backupmatrix = copy.deepcopy(matrix)
+                            gamemode = 1
+
+                        elif savebutton.rect.collidepoint(event.pos):
+                            save_current_level()
+                        elif loadbutton.rect.collidepoint(event.pos):
+                            matrix = load_saved_level()
+                            for x in range(gridsize):
+                                for y in range(gridsize):
+                                    if matrix[x][y] == 2:
+                                        startplaced = True
+                                        startlocation = (x,y)
+                                    elif matrix[x][y] == 3:
+                                        goalplaced = True
+                                        goallocation = (x,y)
+                        elif wallbutton.rect.collidepoint(event.pos):
+                            selected_block = 1
+                        elif startbutton.rect.collidepoint(event.pos):
+                            selected_block = 2
+                        elif goalbutton.rect.collidepoint(event.pos):
+                            selected_block = 3
+                        elif trashbutton.rect.collidepoint(event.pos):
+                            popup1.activate()
+                            
+                
             if event.type == pygame.MOUSEBUTTONUP:	
                 mousebutton = event.button
                 #left click
@@ -391,16 +597,52 @@ while go:
 
                     elif playbutton.rect.collidepoint(event.pos):
                         if startplaced and goalplaced:
+                            path = []
                             
-                            visited_tiles = []
-                            foundpath = []
-                            visited_tiles = dfs(visited_tiles,startlocation,goallocation,foundpath)
-                            print(foundpath)
-                            print(visited_tiles)
-                            for visitedtile in visited_tiles:
+                            pathfound = False
+                            visited_tiles, pathfound =iterative_dfs2(startlocation,goallocation)
+                            if pathfound:
+                                #Tuple of coordinates(x,y)
+                                currentnode = goallocation
+                                while True:
+                                    if visited_tiles.get(currentnode) == None:
+                                        path.append(currentnode)
+                                        break
+                                    
+                                    path.append(currentnode)
+                                    currentnode = visited_tiles.get(currentnode)
+                                
+                            for visitedtile in visited_tiles.keys():
                                 addblock(visitedtile, 4)
-                            for foundtile in foundpath:
+                            
+                            for foundtile in path:
                                 addblock(foundtile, 5)
+
+                            """
+                            path = []
+                            visited_tiles = []
+                            pathfound = False
+                            visited_tiles, pathfound = iterative_dfs(visited_tiles,startlocation,goallocation)
+                            if pathfound:
+                                currentnode = visited_tiles[-1]
+                                while True:
+                                    if currentnode.get_parent() == None:
+                                        path.append(currentnode.get_coords())
+                                        break
+                                    path.append(currentnode.get_coords())
+                                    currentnode = currentnode.get_parent()
+
+                                    
+
+                            
+                            
+                            for visitedtile in visited_tiles:
+                                addblock(visitedtile.get_coords(), 4)
+                            
+
+                            for foundtile in path:
+                                addblock(foundtile, 5)
+                            """
                         else:
                             print("NO")
                   
