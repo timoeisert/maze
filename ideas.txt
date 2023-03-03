@@ -2,3 +2,15 @@
 -Remove neighbors test from playmode
 
 theme rbg : (0,63,89)
+
+
+Linedrawing:
+
+in build mode:
+while if middle mouse button is pressed down 
+Get start coordinates
+depending on performance:
+get current coords and call line drawer
+line drawer returns list of coords that are on line
+draw templine on all these coords
+once user lets go of middle mouse button, put matrix to 1 on all coords

@@ -79,7 +79,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 16
+gridsize = 19
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -94,6 +94,7 @@ gamemode = 0
 selected_algorithm = 3
 left_mouse_clicked = False
 right_mouse_clicked = False
+middle_mouse_clicked = False
 
 selected_block = 1
 
@@ -105,6 +106,10 @@ goallocation = [-1,-1]
 foundpath = []
 backupmatrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 
+#Line drawing variables
+linestartcoords = None
+lineendcoords = None
+linecoords = []
 
 
 #Image Loader
@@ -144,7 +149,8 @@ goimg = pygame.image.load("go.png")
 pauseimg = pygame.image.load("pause.png")
 gopausebutton = PausePlayButton(goimg, 1024,(5*64))
 
-
+linetempimg = pygame.image.load("linetemp.png").convert_alpha()
+grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
 
 
 
@@ -456,6 +462,45 @@ def drawselectionbox(selected):
 	pygame.draw.rect(screen, (210,210,210), (1085,1024-(selected*64),3,64))
 
 
+def naiveline(point1,point2):
+	plottedcoords = []
+	#calculate linear function, line between point 1 and 2
+	#y = mx + b, m = (y2-y1)/(x2-x1)
+	x1, y1 = point1
+	x2, y2 = point2
+	rise = y2 - y1
+	run = x2 - x1
+	
+	#x doesnt change -> slope infinite, vertical line
+	if run == 0:
+		#Make sure that y2 is larger than y1
+		if y2 < y1:
+			y1, y2 = (y2, y1)
+		for y in range(y1, y2+1):
+			plottedcoords.append((x1,y))
+	else:
+		#calculate slope
+		m = rise / run	
+		#calculate b (y1 = mx1 +b -> y1 - mx1 = b) y intercept
+		b = y1 - m * x1
+		#line more horizontal than vertical m=0 included
+		if (m<=1 and m >= -1):
+			if x2 < x1:
+				x1, x2 = (x2, x1)
+			for x in range(x1, x2 + 1):
+				#y = m*x+b
+				y = int(round(m * x + b))
+				plottedcoords.append((x, y))
+		#line more vertical than horizontal
+		else:
+			if y2 < y1:
+				y1, y2 = (y2, y1)
+			for y in range(y1, y2 +1):
+				#x = (y-b)/m
+				x = int(round((y-b)/m))
+				plottedcoords.append((x,y))
+
+	return plottedcoords		
 
 #DRAW FUNTION
 
@@ -508,7 +553,14 @@ def draw():
 			
 			elif matrix[x][y] == 5:
 				pygame.draw.rect(screen, (0,200,0), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
-				
+
+	#drawing preview line:
+	if middle_mouse_clicked:
+		for coords in linecoords:
+			x, y = coords
+			
+			screen.blit(grid_linetemp, [(2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y)])	
+					
 	if popup1.get_active() == True:         
 		popup1.draw(screen)
 
@@ -535,7 +587,7 @@ while go:
 	
 	#Build mode
 	if gamemode == 0:
-				
+		
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				sys.exit()
@@ -572,7 +624,8 @@ while go:
 							addblock(clicked_tile, selected_block)
 							
 						elif mousebutton == 2:
-							pass
+							middle_mouse_clicked = True
+							linestartcoords = clicked_tile
 
 						elif mousebutton == 3:
 							right_mouse_clicked = True
@@ -608,11 +661,26 @@ while go:
 				
 			if event.type == pygame.MOUSEBUTTONUP:	
 				mousebutton = event.button
+				clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
 				#left click
 				if mousebutton == 1:
 					left_mouse_clicked = False
-					
 				
+				elif mousebutton == 2:
+					if mousepos[0] < 1024 and mousepos[1] < 1024:
+						middle_mouse_clicked = False
+						lineendcoords = clicked_tile
+						linecoords = naiveline(linestartcoords,lineendcoords)
+						for coords in linecoords:
+							addblock(coords,1)
+						linecoords = []
+						linestartcoords = None
+						lineendcoords = None					
+					else:
+						middle_mouse_clicked = False
+						linecoords = []
+						linestartcoords = None
+						lineendcoords = None
 				elif mousebutton == 3:
 					right_mouse_clicked = False
 
@@ -624,6 +692,12 @@ while go:
 				
 					if left_mouse_clicked and selected_block == 1:
 						addblock(clicked_tile,selected_block)  
+					elif middle_mouse_clicked:
+						#if mouse is not still on same end coords for line
+						if not lineendcoords == clicked_tile:
+							lineendcoords = clicked_tile
+							linecoords = naiveline(linestartcoords,lineendcoords)
+							
 					elif right_mouse_clicked:
 						removewall(clicked_tile)  
 
