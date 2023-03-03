@@ -1,0 +1,4 @@
+-In Playmode, add play button, adjustable speed, pause button, instant finsish button
+-Remove neighbors test from playmode
+
+theme rbg : (0,63,89)
