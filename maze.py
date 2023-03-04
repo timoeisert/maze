@@ -15,14 +15,15 @@ class Button:
 		screen.blit(self.image, self.rect)
 
 	
-class PausePlayButton(Button):
-	def __init__(self, image, xpos, ypos):
+class StateButton(Button):
+	def __init__(self, image, xpos, ypos, state):
 		self.image = image
 		self.rect = self.image.get_rect()
 		self.rect.x = xpos
 		self.rect.y = ypos
-		#states: 0 -> play, 1 -> pause, 2 -> replay
-		self.state = 0
+		#Pauseplaybutton states: 0 -> play, 1 -> pause, 2 -> replay
+		#Speedbutton states:1
+		self.state = state
 	def set_image(self, image):
 		self.image = image	
 	def set_state(self, state):
@@ -57,7 +58,20 @@ class Node:
 	def get_coords(self):
 		return self.coordinates
 
-
+class Timer:
+	def __init__(self,intervaltime):
+		self.intervaltime = intervaltime
+		self.time = intervaltime
+	def set_time(self,time):
+		self.time = time
+	def get_time(self):
+		return self.time
+	def subtract_time(self):
+		self.time = self.time -1
+	def set_intervaltime(self, intervaltime):
+		self.intervaltime = intervaltime
+	def get_intervaltime(self):
+		return self.intervaltime
 
 
 
@@ -79,7 +93,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 19
+gridsize = 16
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -147,13 +161,21 @@ popup1 = Popup(512,128,400,265,crossimg,False)
 
 goimg = pygame.image.load("go.png")
 pauseimg = pygame.image.load("pause.png")
-gopausebutton = PausePlayButton(goimg, 1024,(5*64))
+gopausebutton = StateButton(goimg, 1024,(6*64),0)
+
+speed0img = pygame.image.load("speed0.png")
+speed1img = pygame.image.load("speed1.png")
+speed2img = pygame.image.load("speed2.png")
+speed3img = pygame.image.load("speed3.png")
+speedimgs = [speed0img,speed1img,speed2img,speed3img]
+speedbutton = StateButton(speed1img,1024,(5*64), 1)
+
 
 linetempimg = pygame.image.load("linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
 
-
-
+algotimer = Timer(120)
+speedtimes = [80,40,10]
 stack_global = []
 visited_tiles_global = {}
 
@@ -350,9 +372,18 @@ def dfs_step(stack,visited_tiles,g):
 	
 
 
+def dfs_algorun(algo_started, algo_finished, selected_algorithm,stack,visited_tiles,startlocation,goallocation):
+	if selected_algorithm == 0:
+		if not algo_finished:
+			if algo_started == False:
+				stack.append((startlocation,None))
+				algo_started = True
+			stack, visited_tiles, algo_finished = dfs_step(stack,visited_tiles,goallocation)
 
+			for visitedtile in visited_tiles.keys():
+				addblock(visitedtile, 4)
 
-
+	return algo_started, algo_finished, stack, visited_tiles
 
 
 
@@ -503,7 +534,23 @@ def naiveline(point1,point2):
 	return plottedcoords		
 
 #DRAW FUNTION
+def reset_algo(visited_tiles,stack,algostarted,algopaused,algofinished):
+	visited_tiles = {}
+	stack = []
+	algostarted = False
+	algopaused = False
+	algofinished = False
+	return visited_tiles,stack,algostarted,algopaused,algofinished
 
+def reset_playmode():
+	gopausebutton.set_state(0)
+	gopausebutton.set_image(goimg)
+	
+	currentspeed = 1
+	speedbutton.set_state(currentspeed)
+	speedbutton.set_image(speedimgs[currentspeed])
+	algotimer.set_intervaltime(speedtimes[currentspeed -1])
+	
 def draw():
 	#Background
 	screen.fill(bgcolor)
@@ -522,6 +569,7 @@ def draw():
 	elif gamemode == 1:
 		editmodebutton.draw(screen)
 		playbutton.draw(screen)
+		speedbutton.draw(screen)
 		gopausebutton.draw(screen)
 	#pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
 	#pygame.draw.rect(screen, (109,162,255), (1088-4,0,4,1024))
@@ -579,7 +627,8 @@ def draw():
 
 
 algo_started = False
-finished = False
+algo_finished = False
+algo_paused = False
 #GAME LOOP
 
 go = True
@@ -730,96 +779,146 @@ while go:
 					
 				#mouse on sidebar
 				else:
-					if editmodebutton.rect.collidepoint(event.pos):
-						
-						matrix = copy.deepcopy(backupmatrix)
-						gamemode = 0
-
-					elif gopausebutton.rect.collidepoint(event.pos):
-						if gopausebutton.get_state() == 0:
-							gopausebutton.set_state(1)
-							gopausebutton.set_image(pauseimg)
-						elif gopausebutton.get_state() == 1:
-							gopausebutton.set_state(0)
-							gopausebutton.set_image(goimg)
-					elif playbutton.rect.collidepoint(event.pos):
-						if startplaced and goalplaced:
-							if selected_algorithm == 0:
-								path = []
+					
+					if mousebutton == 1:
+						if editmodebutton.rect.collidepoint(event.pos):
+							reset_playmode()
+							visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
+								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+							matrix = copy.deepcopy(backupmatrix)
+							gamemode = 0
+						elif speedbutton.rect.collidepoint(event.pos):
+							currentspeed = speedbutton.get_state()
+							if currentspeed < 3:
+								speedbutton.set_state(currentspeed + 1)
+								speedbutton.set_image(speedimgs[currentspeed + 1])
+								algotimer.set_intervaltime(speedtimes[currentspeed])
+							else:
+								currentspeed = 1
+								speedbutton.set_state(currentspeed)
+								speedbutton.set_image(speedimgs[currentspeed])
+								algotimer.set_intervaltime(speedtimes[currentspeed -1])
 								
-								pathfound = False
-								visited_tiles, pathfound =iterative_dfs2(startlocation,goallocation)
-								if pathfound:
-									#Tuple of coordinates(x,y)
-									currentnode = goallocation
-									while True:
-										if visited_tiles.get(currentnode) == None:
+						elif gopausebutton.rect.collidepoint(event.pos):
+							if gopausebutton.get_state() == 0:
+								gopausebutton.set_state(1)
+								gopausebutton.set_image(pauseimg)
+								#If algo is already running, but has been paused
+								if algo_paused:
+									algo_paused = False
+								#If algo is being started for the first time
+								else:
+									algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
+										False,False,0,stack_global,visited_tiles_global,startlocation,goallocation)
+								
+
+
+							elif gopausebutton.get_state() == 1:
+								gopausebutton.set_state(0)
+								gopausebutton.set_image(goimg)
+								algo_paused = True
+						elif playbutton.rect.collidepoint(event.pos):
+							if startplaced and goalplaced:
+								if selected_algorithm == 0:
+									path = []
+									
+									pathfound = False
+									visited_tiles, pathfound =iterative_dfs2(startlocation,goallocation)
+									if pathfound:
+										#Tuple of coordinates(x,y)
+										currentnode = goallocation
+										while True:
+											if visited_tiles.get(currentnode) == None:
+												path.append(currentnode)
+												break
+											
 											path.append(currentnode)
-											break
+											currentnode = visited_tiles.get(currentnode)
 										
-										path.append(currentnode)
-										currentnode = visited_tiles.get(currentnode)
-									
-								for visitedtile in visited_tiles.keys():
-									addblock(visitedtile, 4)
-								
-								for foundtile in path:
-									addblock(foundtile, 5)
-
-							elif selected_algorithm == 1:
-									
-								visited_tiles = []
-								foundpath = []
-								visited_tiles = dfs(visited_tiles,startlocation,goallocation,foundpath)
-								print(foundpath)
-								print(visited_tiles)
-								for visitedtile in visited_tiles:
-									addblock(visitedtile, 4)
-								for foundtile in foundpath:
-									addblock(foundtile, 5)
-
-							elif selected_algorithm == 2:
-									
-								path = []
-								visited_tiles = []
-								pathfound = False
-								visited_tiles, pathfound = iterative_dfs(visited_tiles,startlocation,goallocation)
-								if pathfound:
-									currentnode = visited_tiles[-1]
-									while True:
-										if currentnode.get_parent() == None:
-											path.append(currentnode.get_coords())
-											break
-										path.append(currentnode.get_coords())
-										currentnode = currentnode.get_parent()
-
-										
-
-								
-								
-								for visitedtile in visited_tiles:
-									addblock(visitedtile.get_coords(), 4)
-								
-
-								for foundtile in path:
-									addblock(foundtile, 5)
-							
-							elif selected_algorithm == 3:
-								if not finished:
-									if algo_started == False:
-										stack_global.append((startlocation,None))
-										algo_started = True
-										stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
-
-									else:
-										stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
-
-									for visitedtile in visited_tiles_global.keys():
+									for visitedtile in visited_tiles.keys():
 										addblock(visitedtile, 4)
+									
+									for foundtile in path:
+										addblock(foundtile, 5)
+
+								elif selected_algorithm == 1:
+										
+									visited_tiles = []
+									foundpath = []
+									visited_tiles = dfs(visited_tiles,startlocation,goallocation,foundpath)
+									print(foundpath)
+									print(visited_tiles)
+									for visitedtile in visited_tiles:
+										addblock(visitedtile, 4)
+									for foundtile in foundpath:
+										addblock(foundtile, 5)
+
+								elif selected_algorithm == 2:
+										
+									path = []
+									visited_tiles = []
+									pathfound = False
+									visited_tiles, pathfound = iterative_dfs(visited_tiles,startlocation,goallocation)
+									if pathfound:
+										currentnode = visited_tiles[-1]
+										while True:
+											if currentnode.get_parent() == None:
+												path.append(currentnode.get_coords())
+												break
+											path.append(currentnode.get_coords())
+											currentnode = currentnode.get_parent()
+
+											
+
+									
+									
+									for visitedtile in visited_tiles:
+										addblock(visitedtile.get_coords(), 4)
+									
+
+									for foundtile in path:
+										addblock(foundtile, 5)
 								
-						else:
-							print("NO")
-				  
+								elif selected_algorithm == 3:
+									if not finished:
+										if algo_started == False:
+											stack_global.append((startlocation,None))
+											algo_started = True
+											stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
+
+										else:
+											stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
+
+										for visitedtile in visited_tiles_global.keys():
+											addblock(visitedtile, 4)
+									
+							else:
+								print("NO")
+
+		
+		if algo_started and not algo_paused:
+			if not algo_finished:
+				intervaltime = algotimer.get_intervaltime()
+				currenttime = algotimer.get_time()
+				if currenttime == 0:
+					algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
+						algo_started,algo_finished,0,stack_global,visited_tiles_global,startlocation,goallocation)	
+				
+				#If timer > 0 subtract 1
+				if currenttime > 0:
+					algotimer.set_time(currenttime-1)
+				
+				#If timer is 0, reset to intervaltime
+				else:
+					algotimer.set_time(intervaltime)
+
+			else:
+				algo_started = False
+				print(stack_global)
+				print(visited_tiles_global)
+				stack_global = []
+				visited_tiles_global = []
+								
 	draw()	
 	pygame.display.update()
 	clock.tick(120)

@@ -14,3 +14,14 @@ get current coords and call line drawer
 line drawer returns list of coords that are on line
 draw templine on all these coords
 once user lets go of middle mouse button, put matrix to 1 on all coords
+
+4 12 28
+
+Algomode:
+
+User kommt nur in ALgomode wenn start und gaol platziert sind, ansonsten alert
+Wenn user im algo mode ist, kann er algo auswählen. 
+Standardmäßig dfs
+Standard geschwindigkeit ist 1
+drückt der user auf play, startet der algorithmus
+mit pause wird der timer pausiert
