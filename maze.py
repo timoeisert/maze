@@ -11,6 +11,9 @@ class Button:
 		self.rect = self.image.get_rect()
 		self.rect.x = xpos
 		self.rect.y = ypos
+	def set_pos(self,xpos,ypos):
+		self.rect.x = xpos
+		self.rect.y = ypos
 	def draw(self,screen):
 		screen.blit(self.image, self.rect)
 
@@ -37,6 +40,7 @@ class Popup:
 		self.rect = pygame.Rect(xpos,ypos,length,height)
 		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
 		self.active = active
+		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
 	def activate(self):
 		self.active = True
 	def deactivate(self):
@@ -45,9 +49,29 @@ class Popup:
 		return self.active
 	def get_quitbutton(self):
 		return self.quitbutton
+	def get_topbox(self):
+		return self.topbox
+	def reset(self):
+		self.rect.center = (512,512)
+		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
+		self.topbox.x =self.rect.x
+		self.topbox.y = self.rect.y
+	def update(self,xpos,ypos):
+		
+		self.rect.x+= xpos
+		self.rect.y+= ypos
+		
+		if (self.rect.x > (1088 -10) or self.rect.y > (1024 - 10) or
+			self.rect.x < (10-self.rect.width) or self.rect.y < (10- self.rect.height)):
+			self.rect.center = (512,512)
+		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
+		self.topbox.x =self.rect.x
+		self.topbox.y = self.rect.y
 	def draw(self,screen):
 		pygame.draw.rect(screen,(100,0,0),self.rect)
+		pygame.draw.rect(screen,(200,0,0),self.topbox)
 		self.quitbutton.draw(screen)
+	
 
 class Node:
 	def __init__(self,coordinates,parent):
@@ -72,6 +96,8 @@ class Timer:
 		self.intervaltime = intervaltime
 	def get_intervaltime(self):
 		return self.intervaltime
+
+
 
 
 
@@ -130,6 +156,8 @@ linecoords = []
 playmodeimg = pygame.image.load("playmode.png")
 playmodebutton = Button(playmodeimg,1024, 0)
 
+helpimg = pygame.image.load("help.png")
+helpbutton = Button(helpimg, 1024,(1*64))
 
 saveimg = pygame.image.load("savee.png")
 savebutton = Button(saveimg, 1024, (2*64))
@@ -193,11 +221,17 @@ visited_tiles_global = {}
 
 
 
+#Text Renderer
+text_font = pygame.font.SysFont("Arial",30)
+text_cache = {}
 
+def get_textmsg(msg, colour):
+	if not msg in text_cache:
+		text_cache[msg] = text_font.render(msg, True, colour)
+	return text_cache[msg]
 
-
-
-
+def draw_text(img, x, y):
+	screen.blit(img, (x,y))
 
 
 
@@ -588,6 +622,7 @@ def draw():
 	
 	if gamemode == 0:
 		playmodebutton.draw(screen)
+		helpbutton.draw(screen)
 		savebutton.draw(screen)
 		loadbutton.draw(screen)
 		goalbutton.draw(screen)
@@ -596,7 +631,8 @@ def draw():
 		trashbutton.draw(screen)
 		#
 		drawselectionbox(4-selected_block)
-
+		
+		
 	elif gamemode == 1:
 		editmodebutton.draw(screen)
 		speedbutton.draw(screen)
@@ -642,7 +678,11 @@ def draw():
 			x, y = coords
 			
 			screen.blit(grid_linetemp, [(2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y)])	
-					
+
+	#textimg = get_textmsg("This is the help bar\nSo is this",(100,0,0))
+	#print(textimg.get_rect())
+	#draw_text(textimg,500,500)	
+		
 	if popup1.get_active() == True:         
 		popup1.draw(screen)
 
@@ -659,7 +699,7 @@ def draw():
 
 
 
-
+popupmoving = False
 algo_started = False
 algo_finished = False
 algo_paused = False
@@ -667,10 +707,7 @@ algo_paused = False
 
 go = True
 while go:
-	
-	#Build mode
-	if gamemode == 0:
-		
+	if popup1.get_active():
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				sys.exit()
@@ -678,22 +715,45 @@ while go:
 			if event.type == pygame.MOUSEBUTTONDOWN:	
 				mousepos = event.pos
 				mousebutton = event.button
-
-				#Wenn popup aktiv:
-				if popup1.get_active():
-					if mousebutton == 1:
-						if popup1.get_quitbutton().rect.collidepoint(event.pos):
-							
-							popup1.deactivate()
-						
-						elif popup1.rect.collidepoint(event.pos):
-
-							cleargrid()
-							popup1.deactivate()
 				
-				#Wenn popup nicht aktiv:
-				else:
-					#mouse on grid
+				if mousebutton == 1:
+					if popup1.get_quitbutton().rect.collidepoint(event.pos):
+						
+						popup1.deactivate()
+						popup1.reset()
+						
+					elif popup1.get_topbox().collidepoint(event.pos):
+						popupmoving = True
+						print("YE")
+					elif popup1.rect.collidepoint(event.pos):
+
+						cleargrid()
+						popup1.deactivate()
+						popup1.reset()
+						
+			if event.type == pygame.MOUSEBUTTONUP and popupmoving:
+				popupmoving = False
+			
+			if event.type == pygame.MOUSEMOTION and popupmoving:
+				print(event.rel[0],event.rel[1])
+				popup1.update(event.rel[0],event.rel[1])
+		
+	else:					
+		#Build mode
+
+		if gamemode == 0:
+			
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					sys.exit()
+				
+				if event.type == pygame.MOUSEBUTTONDOWN:	
+					mousepos = event.pos
+					mousebutton = event.button
+
+					#Wenn popup nicht aktiv:
+				
+						#mouse on grid
 					if mousepos[0] < 1024 and mousepos[1] < 1024:
 					
 						clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
@@ -716,260 +776,264 @@ while go:
 
 					#mouse on sidebar
 					else:
-						if playmodebutton.rect.collidepoint(event.pos):
-							backupmatrix = copy.deepcopy(matrix)
-							gamemode = 1
+						if mousebutton == 1:
+							if playmodebutton.rect.collidepoint(event.pos):
+								backupmatrix = copy.deepcopy(matrix)
+								gamemode = 1
 
-						elif savebutton.rect.collidepoint(event.pos):
-							save_current_level()
-						elif loadbutton.rect.collidepoint(event.pos):
-							matrix = load_saved_level()
-							for x in range(gridsize):
-								for y in range(gridsize):
-									if matrix[x][y] == 2:
-										startplaced = True
-										startlocation = (x,y)
-									elif matrix[x][y] == 3:
-										goalplaced = True
-										goallocation = (x,y)
-						elif wallbutton.rect.collidepoint(event.pos):
-							selected_block = 1
-						elif startbutton.rect.collidepoint(event.pos):
-							selected_block = 2
-						elif goalbutton.rect.collidepoint(event.pos):
-							selected_block = 3
-						elif trashbutton.rect.collidepoint(event.pos):
-							popup1.activate()
+							elif helpbutton.rect.collidepoint(event.pos):
+								pass
+							elif savebutton.rect.collidepoint(event.pos):
+								save_current_level()
+							elif loadbutton.rect.collidepoint(event.pos):
+								matrix = load_saved_level()
+								for x in range(gridsize):
+									for y in range(gridsize):
+										if matrix[x][y] == 2:
+											startplaced = True
+											startlocation = (x,y)
+										elif matrix[x][y] == 3:
+											goalplaced = True
+											goallocation = (x,y)
+							elif wallbutton.rect.collidepoint(event.pos):
+								selected_block = 1
+							elif startbutton.rect.collidepoint(event.pos):
+								selected_block = 2
+							elif goalbutton.rect.collidepoint(event.pos):
+								selected_block = 3
+							elif trashbutton.rect.collidepoint(event.pos):
+								popup1.activate()
 							
 				
-			if event.type == pygame.MOUSEBUTTONUP:	
-				mousebutton = event.button
-				clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
-				#left click
-				if mousebutton == 1:
-					left_mouse_clicked = False
-				
-				elif mousebutton == 2:
-					if mousepos[0] < 1024 and mousepos[1] < 1024:
-						middle_mouse_clicked = False
-						lineendcoords = clicked_tile
-						linecoords = naiveline(linestartcoords,lineendcoords)
-						for coords in linecoords:
-							addblock(coords,1)
-						linecoords = []
-						linestartcoords = None
-						lineendcoords = None					
-					else:
-						middle_mouse_clicked = False
-						linecoords = []
-						linestartcoords = None
-						lineendcoords = None
-				elif mousebutton == 3:
-					right_mouse_clicked = False
-
-			if event.type == pygame.MOUSEMOTION:
-				mousepos = event.pos
-				if mousepos[0] < 1024 and mousepos[1] < 1024:
-			
-					clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
-				
-					if left_mouse_clicked and selected_block == 1:
-						addblock(clicked_tile,selected_block)  
-					elif middle_mouse_clicked:
-						#if mouse is not still on same end coords for line
-						if not lineendcoords == clicked_tile:
-							lineendcoords = clicked_tile
-							linecoords = naiveline(linestartcoords,lineendcoords)
-							
-					elif right_mouse_clicked:
-						removewall(clicked_tile)  
-
-
-	#Algo mopde                    
-	elif gamemode == 1:        
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				sys.exit()
-			
-			if event.type == pygame.MOUSEBUTTONDOWN:	
-				mousepos = event.pos
-				mousebutton = event.button
-				#mouse on grid
-				if mousepos[0] < 1024 and mousepos[1] < 1024:
 					
+				elif event.type == pygame.MOUSEBUTTONUP:	
+					mousebutton = event.button
 					clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
-					
 					#left click
 					if mousebutton == 1:
-						pass
-						"""
-						Displays all neighboring tiles of clicked tile
+						left_mouse_clicked = False
+					
+					elif mousebutton == 2:
+						if mousepos[0] < 1024 and mousepos[1] < 1024:
+							middle_mouse_clicked = False
+							lineendcoords = clicked_tile
+							linecoords = naiveline(linestartcoords,lineendcoords)
+							for coords in linecoords:
+								addblock(coords,1)
+							linecoords = []
+							linestartcoords = None
+							lineendcoords = None					
+						else:
+							middle_mouse_clicked = False
+							linecoords = []
+							linestartcoords = None
+							lineendcoords = None
+					elif mousebutton == 3:
+						right_mouse_clicked = False
+
+				if event.type == pygame.MOUSEMOTION:
+					mousepos = event.pos
+					if mousepos[0] < 1024 and mousepos[1] < 1024:
+				
+						clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
+					
+						if left_mouse_clicked and selected_block == 1:
+							addblock(clicked_tile,selected_block)  
+						elif middle_mouse_clicked:
+							#if mouse is not still on same end coords for line
+							if not lineendcoords == clicked_tile:
+								lineendcoords = clicked_tile
+								linecoords = naiveline(linestartcoords,lineendcoords)
+								
+						elif right_mouse_clicked:
+							removewall(clicked_tile)  
+
+
+		#Algo mopde                    
+		elif gamemode == 1:        
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					sys.exit()
+				
+				if event.type == pygame.MOUSEBUTTONDOWN:	
+					mousepos = event.pos
+					mousebutton = event.button
+					#mouse on grid
+					if mousepos[0] < 1024 and mousepos[1] < 1024:
 						
-						neighbors = get_neighbors(clicked_tile)
-						#If mouse doesnt move while clicking, MOUSEMOTION isnt triggerd. Thats why the matrix needs to be adjusted here
-						for neighbor in neighbors:
-							addblock(neighbor, 1)
-						"""
-					
-				#mouse on sidebar
-				else:
-					
-					if mousebutton == 1:
-						if editmodebutton.rect.collidepoint(event.pos):
-							reset_playmode()
-							visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
-								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
-							matrix = copy.deepcopy(backupmatrix)
-							gamemode = 0
-						elif speedbutton.rect.collidepoint(event.pos):
-							currentspeed = speedbutton.get_state()
-							if currentspeed < 3:
-								speedbutton.set_state(currentspeed + 1)
-								speedbutton.set_image(speedimgs[currentspeed + 1])
-								algotimer.set_intervaltime(speedtimes[currentspeed])
-							else:
-								currentspeed = 1
-								speedbutton.set_state(currentspeed)
-								speedbutton.set_image(speedimgs[currentspeed])
-								algotimer.set_intervaltime(speedtimes[currentspeed -1])
-								
-						elif gopausebutton.rect.collidepoint(event.pos):
-							if gopausebutton.get_state() == 0:
-								gopausebutton.set_state(1)
-								gopausebutton.set_image(pauseimg)
-								#If algo is already running, but has been paused
-								if algo_paused:
-									algo_paused = False
-								#If algo is being started for the first time
+						clicked_tile = (math.floor(mousepos[0]/tiles),math.floor(mousepos[1]/tiles))
+						
+						#left click
+						if mousebutton == 1:
+							pass
+							"""
+							Displays all neighboring tiles of clicked tile
+							
+							neighbors = get_neighbors(clicked_tile)
+							#If mouse doesnt move while clicking, MOUSEMOTION isnt triggerd. Thats why the matrix needs to be adjusted here
+							for neighbor in neighbors:
+								addblock(neighbor, 1)
+							"""
+						
+					#mouse on sidebar
+					else:
+						
+						if mousebutton == 1:
+							if editmodebutton.rect.collidepoint(event.pos):
+								reset_playmode()
+								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
+									visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+								matrix = copy.deepcopy(backupmatrix)
+								gamemode = 0
+							elif speedbutton.rect.collidepoint(event.pos):
+								currentspeed = speedbutton.get_state()
+								if currentspeed < 3:
+									speedbutton.set_state(currentspeed + 1)
+									speedbutton.set_image(speedimgs[currentspeed + 1])
+									algotimer.set_intervaltime(speedtimes[currentspeed])
 								else:
-									algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
-										False,False,0,stack_global,visited_tiles_global,startlocation,goallocation)
-								
+									currentspeed = 1
+									speedbutton.set_state(currentspeed)
+									speedbutton.set_image(speedimgs[currentspeed])
+									algotimer.set_intervaltime(speedtimes[currentspeed -1])
+									
+							elif gopausebutton.rect.collidepoint(event.pos):
+								if gopausebutton.get_state() == 0:
+									gopausebutton.set_state(1)
+									gopausebutton.set_image(pauseimg)
+									#If algo is already running, but has been paused
+									if algo_paused:
+										algo_paused = False
+									#If algo is being started for the first time
+									else:
+										algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
+											False,False,0,stack_global,visited_tiles_global,startlocation,goallocation)
+									
 
 
-							elif gopausebutton.get_state() == 1:
-								gopausebutton.set_state(0)
-								gopausebutton.set_image(goimg)
-								algo_paused = True
-								
-							elif gopausebutton.get_state() == 2:
+								elif gopausebutton.get_state() == 1:
+									gopausebutton.set_state(0)
+									gopausebutton.set_image(goimg)
+									algo_paused = True
+									
+								elif gopausebutton.get_state() == 2:
+									visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
+										visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+									matrix = copy.deepcopy(backupmatrix)
+									gopausebutton.set_state(0)
+									gopausebutton.set_image(goimg)
+									
+							elif stopbutton.rect.collidepoint(event.pos):
 								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
 									visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
 								matrix = copy.deepcopy(backupmatrix)
 								gopausebutton.set_state(0)
-								gopausebutton.set_image(goimg)
-								
-						elif stopbutton.rect.collidepoint(event.pos):
-							visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
-								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
-							matrix = copy.deepcopy(backupmatrix)
-							gopausebutton.set_state(0)
-							gopausebutton.set_image(goimg)			
+								gopausebutton.set_image(goimg)			
 
-						"""
-						elif playbutton.rect.collidepoint(event.pos):
-							if startplaced and goalplaced:
-								if selected_algorithm == 0:
-									path = []
-									
-									pathfound = False
-									visited_tiles, pathfound =iterative_dfs2(startlocation,goallocation)
-									if pathfound:
-										#Tuple of coordinates(x,y)
-										currentnode = goallocation
-										while True:
-											if visited_tiles.get(currentnode) == None:
+							"""
+							elif playbutton.rect.collidepoint(event.pos):
+								if startplaced and goalplaced:
+									if selected_algorithm == 0:
+										path = []
+										
+										pathfound = False
+										visited_tiles, pathfound =iterative_dfs2(startlocation,goallocation)
+										if pathfound:
+											#Tuple of coordinates(x,y)
+											currentnode = goallocation
+											while True:
+												if visited_tiles.get(currentnode) == None:
+													path.append(currentnode)
+													break
+												
 												path.append(currentnode)
-												break
+												currentnode = visited_tiles.get(currentnode)
 											
-											path.append(currentnode)
-											currentnode = visited_tiles.get(currentnode)
-										
-									for visitedtile in visited_tiles.keys():
-										addblock(visitedtile, 4)
-									
-									for foundtile in path:
-										addblock(foundtile, 5)
-
-								elif selected_algorithm == 1:
-										
-									visited_tiles = []
-									foundpath = []
-									visited_tiles = dfs(visited_tiles,startlocation,goallocation,foundpath)
-									print(foundpath)
-									print(visited_tiles)
-									for visitedtile in visited_tiles:
-										addblock(visitedtile, 4)
-									for foundtile in foundpath:
-										addblock(foundtile, 5)
-
-								elif selected_algorithm == 2:
-										
-									path = []
-									visited_tiles = []
-									pathfound = False
-									visited_tiles, pathfound = iterative_dfs(visited_tiles,startlocation,goallocation)
-									if pathfound:
-										currentnode = visited_tiles[-1]
-										while True:
-											if currentnode.get_parent() == None:
-												path.append(currentnode.get_coords())
-												break
-											path.append(currentnode.get_coords())
-											currentnode = currentnode.get_parent()
-
-											
-
-									
-									
-									for visitedtile in visited_tiles:
-										addblock(visitedtile.get_coords(), 4)
-									
-
-									for foundtile in path:
-										addblock(foundtile, 5)
-								
-								elif selected_algorithm == 3:
-									if not finished:
-										if algo_started == False:
-											stack_global.append((startlocation,None))
-											algo_started = True
-											stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
-
-										else:
-											stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
-
-										for visitedtile in visited_tiles_global.keys():
+										for visitedtile in visited_tiles.keys():
 											addblock(visitedtile, 4)
-									
-							else:
-								print("NO")
-							"""	
-		
-		if algo_started and not algo_paused:
-			if not algo_finished:
-				intervaltime = algotimer.get_intervaltime()
-				currenttime = algotimer.get_time()
-				if currenttime == 0:
-					algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
-						algo_started,algo_finished,0,stack_global,visited_tiles_global,startlocation,goallocation)	
-				
-				#If timer > 0 subtract 1
-				if currenttime > 0:
-					algotimer.set_time(currenttime-1)
-				
-				#If timer is 0, reset to intervaltime
-				else:
-					algotimer.set_time(intervaltime)
+										
+										for foundtile in path:
+											addblock(foundtile, 5)
 
-			else:
-				algo_started = False
-				gopausebutton.set_state(2)
-				gopausebutton.set_image(resetimg)
-				print(stack_global)
-				print(visited_tiles_global)
-				stack_global = []
-				visited_tiles_global = []
+									elif selected_algorithm == 1:
+											
+										visited_tiles = []
+										foundpath = []
+										visited_tiles = dfs(visited_tiles,startlocation,goallocation,foundpath)
+										print(foundpath)
+										print(visited_tiles)
+										for visitedtile in visited_tiles:
+											addblock(visitedtile, 4)
+										for foundtile in foundpath:
+											addblock(foundtile, 5)
+
+									elif selected_algorithm == 2:
+											
+										path = []
+										visited_tiles = []
+										pathfound = False
+										visited_tiles, pathfound = iterative_dfs(visited_tiles,startlocation,goallocation)
+										if pathfound:
+											currentnode = visited_tiles[-1]
+											while True:
+												if currentnode.get_parent() == None:
+													path.append(currentnode.get_coords())
+													break
+												path.append(currentnode.get_coords())
+												currentnode = currentnode.get_parent()
+
+												
+
+										
+										
+										for visitedtile in visited_tiles:
+											addblock(visitedtile.get_coords(), 4)
+										
+
+										for foundtile in path:
+											addblock(foundtile, 5)
+									
+									elif selected_algorithm == 3:
+										if not finished:
+											if algo_started == False:
+												stack_global.append((startlocation,None))
+												algo_started = True
+												stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
+
+											else:
+												stack_global, visited_tiles_global, finished = dfs_step(stack_global,visited_tiles_global,goallocation)
+
+											for visitedtile in visited_tiles_global.keys():
+												addblock(visitedtile, 4)
+										
+								else:
+									print("NO")
+								"""	
+			
+			if algo_started and not algo_paused:
+				if not algo_finished:
+					intervaltime = algotimer.get_intervaltime()
+					currenttime = algotimer.get_time()
+					if currenttime == 0:
+						algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
+							algo_started,algo_finished,0,stack_global,visited_tiles_global,startlocation,goallocation)	
+					
+					#If timer > 0 subtract 1
+					if currenttime > 0:
+						algotimer.set_time(currenttime-1)
+					
+					#If timer is 0, reset to intervaltime
+					else:
+						algotimer.set_time(intervaltime)
+
+				else:
+					algo_started = False
+					gopausebutton.set_state(2)
+					gopausebutton.set_image(resetimg)
+					print(stack_global)
+					print(visited_tiles_global)
+					stack_global = []
+					visited_tiles_global = []
 								
 	draw()	
 	pygame.display.update()
