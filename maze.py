@@ -41,6 +41,7 @@ class Popup:
 		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
 		self.active = active
 		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
+		self.moving = False
 	def activate(self):
 		self.active = True
 	def deactivate(self):
@@ -56,6 +57,10 @@ class Popup:
 		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
 		self.topbox.x =self.rect.x
 		self.topbox.y = self.rect.y
+	def set_moving(self,moving):
+		self.moving = moving
+	def get_moving(self):
+		return self.moving
 	def update(self,xpos,ypos):
 		
 		self.rect.x+= xpos
@@ -64,12 +69,14 @@ class Popup:
 		if (self.rect.x > (1088 -10) or self.rect.y > (1024 - 10) or
 			self.rect.x < (10-self.rect.width) or self.rect.y < (10- self.rect.height)):
 			self.rect.center = (512,512)
+			self.moving = False
+			
 		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
 		self.topbox.x =self.rect.x
 		self.topbox.y = self.rect.y
 	def draw(self,screen):
-		pygame.draw.rect(screen,(100,0,0),self.rect)
-		pygame.draw.rect(screen,(200,0,0),self.topbox)
+		pygame.draw.rect(screen,(136,195,232),self.rect)
+		pygame.draw.rect(screen,(82,138,174),self.topbox)
 		self.quitbutton.draw(screen)
 	
 
@@ -153,20 +160,20 @@ linecoords = []
 
 
 #Image Loader
-playmodeimg = pygame.image.load("playmode.png")
+playmodeimg = pygame.image.load("playmodev2.png")
 playmodebutton = Button(playmodeimg,1024, 0)
 
 helpimg = pygame.image.load("help.png")
 helpbutton = Button(helpimg, 1024,(1*64))
 
-saveimg = pygame.image.load("savee.png")
-savebutton = Button(saveimg, 1024, (2*64))
+saveimg = pygame.image.load("savev2.png")
+savebutton = Button(saveimg, 1024, (3*64))
 
 loadimg = pygame.image.load("load.png")
-loadbutton = Button(loadimg, 1024, (3*64))
+loadbutton = Button(loadimg, 1024, (4*64))
 
 trashimg = pygame.image.load("trash.png")
-trashbutton = Button(trashimg, 1024, (4*64))
+trashbutton = Button(trashimg, 1024, (5*64))
 
 wallimg = pygame.transform.scale(pygame.image.load("wall.png"), (64,64))
 wallbutton = Button(wallimg, 1024, 832)
@@ -213,9 +220,9 @@ speedbutton = StateButton(speed1img,1024,(5*64), 1)
 
 linetempimg = pygame.image.load("linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
-
-algotimer = Timer(120)
 speedtimes = [80,40,10]
+algotimer = Timer(speedtimes[0])
+
 stack_global = []
 visited_tiles_global = {}
 
@@ -605,6 +612,7 @@ def reset_algo(visited_tiles,stack,algostarted,algopaused,algofinished):
 	algostarted = False
 	algopaused = False
 	algofinished = False
+	algotimer.set_time(algotimer.get_intervaltime())
 	return visited_tiles,stack,algostarted,algopaused,algofinished
 
 def reset_playmode():
@@ -699,7 +707,7 @@ def draw():
 
 
 
-popupmoving = False
+
 algo_started = False
 algo_finished = False
 algo_paused = False
@@ -723,19 +731,19 @@ while go:
 						popup1.reset()
 						
 					elif popup1.get_topbox().collidepoint(event.pos):
-						popupmoving = True
-						print("YE")
+						popup1.set_moving(True)
+						
 					elif popup1.rect.collidepoint(event.pos):
 
 						cleargrid()
 						popup1.deactivate()
 						popup1.reset()
 						
-			if event.type == pygame.MOUSEBUTTONUP and popupmoving:
-				popupmoving = False
+			if event.type == pygame.MOUSEBUTTONUP and popup1.get_moving():
+				popup1.set_moving(False)
 			
-			if event.type == pygame.MOUSEMOTION and popupmoving:
-				print(event.rel[0],event.rel[1])
+			if event.type == pygame.MOUSEMOTION and popup1.get_moving():
+				
 				popup1.update(event.rel[0],event.rel[1])
 		
 	else:					
