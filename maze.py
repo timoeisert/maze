@@ -127,35 +127,44 @@ linecoords = []
 
 
 #Image Loader
+playmodeimg = pygame.image.load("playmode.png")
+playmodebutton = Button(playmodeimg,1024, 0)
+
+
 saveimg = pygame.image.load("savee.png")
-savebutton = Button(saveimg, 1024, 64)
+savebutton = Button(saveimg, 1024, (2*64))
 
 loadimg = pygame.image.load("load.png")
-loadbutton = Button(loadimg, 1024, 128)
+loadbutton = Button(loadimg, 1024, (3*64))
+
+trashimg = pygame.image.load("trash.png")
+trashbutton = Button(trashimg, 1024, (4*64))
+
+wallimg = pygame.transform.scale(pygame.image.load("wall.png"), (64,64))
+wallbutton = Button(wallimg, 1024, 832)
+
+startimg = pygame.transform.scale(pygame.image.load("start.png"), (64,64))
+startbutton = Button(startimg, 1024, 896)
 
 goalimg = pygame.image.load("goal.png")
 grid_goalimg = pygame.transform.scale(goalimg, (int(tilewidth),int(tilewidth)))
 menu_goalimg = pygame.transform.scale(goalimg, (64,64))
 goalbutton = Button(menu_goalimg, 1024, 960)
 
-startimg = pygame.transform.scale(pygame.image.load("start.png"), (64,64))
-startbutton = Button(startimg, 1024, 896)
-
-wallimg = pygame.transform.scale(pygame.image.load("wall.png"), (64,64))
-wallbutton = Button(wallimg, 1024, 832)
-
-trashimg = pygame.image.load("trash.png")
-trashbutton = Button(trashimg, 1024,192)
-
-
-playmodeimg = pygame.image.load("playmode.png")
-playmodebutton = Button(playmodeimg,1024, 0)
-
 editmodeimg = pygame.transform.scale(pygame.image.load("editmode.png"), (64,64))
 editmodebutton = Button(editmodeimg,1024, 0)
 
 crossimg = pygame.transform.scale(pygame.image.load("cross.png"),(32,32))
 popup1 = Popup(512,128,400,265,crossimg,False)
+
+
+
+
+
+
+
+
+
 
 goimg = pygame.image.load("go.png")
 pauseimg = pygame.image.load("pause.png")
