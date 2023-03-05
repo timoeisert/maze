@@ -127,10 +127,10 @@ linecoords = []
 
 
 #Image Loader
-saveimg = pygame.transform.scale(pygame.image.load("save.png"), (64,64))
+saveimg = pygame.image.load("savee.png")
 savebutton = Button(saveimg, 1024, 64)
 
-loadimg = pygame.transform.scale(pygame.image.load("load.png"), (64,64))
+loadimg = pygame.image.load("load.png")
 loadbutton = Button(loadimg, 1024, 128)
 
 goalimg = pygame.image.load("goal.png")
@@ -144,13 +144,11 @@ startbutton = Button(startimg, 1024, 896)
 wallimg = pygame.transform.scale(pygame.image.load("wall.png"), (64,64))
 wallbutton = Button(wallimg, 1024, 832)
 
-trashimg = pygame.transform.scale(pygame.image.load("trash.png"), (64,64))
+trashimg = pygame.image.load("trash.png")
 trashbutton = Button(trashimg, 1024,192)
 
-playimg = pygame.transform.scale(pygame.image.load("play.png"), (64,64))
-playbutton = Button(playimg, 1024, 64)
 
-playmodeimg = pygame.transform.scale(pygame.image.load("playmode.png"), (64,64))
+playmodeimg = pygame.image.load("playmode.png")
 playmodebutton = Button(playmodeimg,1024, 0)
 
 editmodeimg = pygame.transform.scale(pygame.image.load("editmode.png"), (64,64))
@@ -161,7 +159,12 @@ popup1 = Popup(512,128,400,265,crossimg,False)
 
 goimg = pygame.image.load("go.png")
 pauseimg = pygame.image.load("pause.png")
+resetimg = pygame.image.load("reset.png")
 gopausebutton = StateButton(goimg, 1024,(6*64),0)
+
+stopimg = pygame.image.load("stop.png")
+stopbutton = Button(stopimg,1024,(7*64))
+
 
 speed0img = pygame.image.load("speed0.png")
 speed1img = pygame.image.load("speed1.png")
@@ -349,14 +352,24 @@ def iterative_dfs(visited_tiles,s,g):
 
 def dfs_step(stack,visited_tiles,g):
 	if stack:
-
-		v = stack.pop(-1)
-		visited_tiles[v[0]] = v[1]
-
-		if v[0] == g:
-			
-			return stack, visited_tiles, True
 		
+		#Takes nodes off the stack until an unvisited node is found. Without this, the porgram sometimes appears to do nothing,
+		#Because the node on top of stack has already been visited (loop) and the program needs to wait until the next step to try again
+		while True:
+			if stack:
+				v = stack.pop(-1)
+				if not (v[0] in visited_tiles.keys()):
+					break
+			else:
+				return stack, visited_tiles, False
+		
+		
+		#If vertex has not been visited yet (vertecies can be added to stack more than once)
+		
+		visited_tiles[v[0]] = v[1]
+		if v[0] == g:
+		
+			return stack, visited_tiles, True
 		#List of tuples (x,y) of coordinates
 		tileneighbors = get_neighbors(v[0])
 		tileneighbors.reverse()
@@ -364,6 +377,7 @@ def dfs_step(stack,visited_tiles,g):
 		for neighbor in tileneighbors:
 			if matrix[neighbor[0]][neighbor[1]] != 1:
 				if not neighbor in visited_tiles.keys():
+					
 					stack.append((neighbor,v[0]))
 
 		return stack, visited_tiles, False
@@ -380,9 +394,14 @@ def dfs_algorun(algo_started, algo_finished, selected_algorithm,stack,visited_ti
 				algo_started = True
 			stack, visited_tiles, algo_finished = dfs_step(stack,visited_tiles,goallocation)
 
+			for stacktile in stack:
+				addblock(stacktile[0],5)
+			addblock(stack[-1][0],6)
+
 			for visitedtile in visited_tiles.keys():
 				addblock(visitedtile, 4)
-
+			
+			
 	return algo_started, algo_finished, stack, visited_tiles
 
 
@@ -466,6 +485,9 @@ def addblock(selected_tile, selected_block):
 		if not (selected_tile == goallocation) and not (selected_tile == startlocation):
 			matrix[selected_tile[0]][selected_tile[1]] = selected_block        
 
+	elif selected_block == 6:
+		if not (selected_tile == goallocation) and not (selected_tile == startlocation):
+			matrix[selected_tile[0]][selected_tile[1]] = selected_block        
 
 def removewall(selected_tile):
 	global startplaced, goalplaced, startlocation, goallocation
@@ -568,9 +590,10 @@ def draw():
 
 	elif gamemode == 1:
 		editmodebutton.draw(screen)
-		playbutton.draw(screen)
 		speedbutton.draw(screen)
 		gopausebutton.draw(screen)
+		if algo_started:
+			stopbutton.draw(screen)
 	#pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
 	#pygame.draw.rect(screen, (109,162,255), (1088-4,0,4,1024))
 	
@@ -601,7 +624,9 @@ def draw():
 			
 			elif matrix[x][y] == 5:
 				pygame.draw.rect(screen, (0,200,0), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
-
+			
+			elif matrix[x][y] == 6:
+				pygame.draw.rect(screen, (0,200,100), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
 	#drawing preview line:
 	if middle_mouse_clicked:
 		for coords in linecoords:
@@ -817,6 +842,22 @@ while go:
 								gopausebutton.set_state(0)
 								gopausebutton.set_image(goimg)
 								algo_paused = True
+								
+							elif gopausebutton.get_state() == 2:
+								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
+									visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+								matrix = copy.deepcopy(backupmatrix)
+								gopausebutton.set_state(0)
+								gopausebutton.set_image(goimg)
+								
+						elif stopbutton.rect.collidepoint(event.pos):
+							visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
+								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+							matrix = copy.deepcopy(backupmatrix)
+							gopausebutton.set_state(0)
+							gopausebutton.set_image(goimg)			
+
+						"""
 						elif playbutton.rect.collidepoint(event.pos):
 							if startplaced and goalplaced:
 								if selected_algorithm == 0:
@@ -894,7 +935,7 @@ while go:
 									
 							else:
 								print("NO")
-
+							"""	
 		
 		if algo_started and not algo_paused:
 			if not algo_finished:
@@ -914,6 +955,8 @@ while go:
 
 			else:
 				algo_started = False
+				gopausebutton.set_state(2)
+				gopausebutton.set_image(resetimg)
 				print(stack_global)
 				print(visited_tiles_global)
 				stack_global = []
