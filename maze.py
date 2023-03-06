@@ -42,10 +42,19 @@ class Popup:
 		self.active = active
 		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
 		self.moving = False
+		self.reset()
 	def activate(self):
+		global any_popup_active
+		
 		self.active = True
+		any_popup_active = True
 	def deactivate(self):
+		global any_popup_active
+	
 		self.active = False
+		any_popup_active = False
+	def get_rect(self):
+		return self.rect
 	def get_active(self):
 		return self.active
 	def get_quitbutton(self):
@@ -191,8 +200,9 @@ editmodebutton = Button(editmodeimg,1024, 0)
 
 crossimg = pygame.transform.scale(pygame.image.load("cross.png"),(32,32))
 popup1 = Popup(512,128,400,265,crossimg,False)
-popup1.reset()
 
+build_help_popup = Popup(512,128,600,700,crossimg,False)
+popuplist = [build_help_popup,popup1]
 
 
 
@@ -241,6 +251,33 @@ def get_textmsg(msg, colour):
 def draw_text(img, x, y):
 	screen.blit(img, (x,y))
 
+
+def blit_text(screen, text, popuprect, font, color=pygame.Color('black')):
+    words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
+    space = font.size(' ')[0]  # The width of a space.
+    #plus padding of 10 on both sides
+    x = popuprect[0] + 10
+    y = popuprect[1] + 40
+    #x coordinate + width of popup
+    max_width = popuprect[2] + popuprect[0] - 10
+    #max_height = surface.get_size()
+   
+    for line in words:
+        for word in line:
+            word_surface = font.render(word, 1, color)
+            word_width, word_height = word_surface.get_size()
+            if x + word_width >= max_width:
+                x = popuprect[0] +10  # Reset the x.
+                y += word_height  # Start on new row.
+            screen.blit(word_surface, (x, y))
+            x += word_width + space
+        x = popuprect[0] +10 # Reset the x.
+        y += word_height  # Start on new row.
+
+text = "This is a really long sentence with a couple of breaks.\nSometimes it will break even if there isn't a break " \
+       "in the sentence, but that's because the text is too long to fit the screen.\nIt can look strange sometimes.\n" \
+       "This function doesn't check if the text is too high to fit on the height of the surface though, so sometimes " \
+       "text will disappear underneath the surface"
 
 
 def get_neighbors(s):
@@ -698,9 +735,13 @@ def draw():
 	#textimg = get_textmsg("This is the help bar\nSo is this",(100,0,0))
 	#print(textimg.get_rect())
 	#draw_text(textimg,500,500)	
+	
+	for popup in popuplist:
+		if popup.get_active():
+			popup.draw(screen)
+			blit_text(screen, text, popup.get_rect(), text_font)
+	
 		
-	if popup1.get_active() == True:         
-		popup1.draw(screen)
 
 
 
@@ -714,8 +755,9 @@ def draw():
 
 
 
-
-
+any_popup_active = False
+currently_selected_popup = None
+moving = False
 algo_started = False
 algo_finished = False
 algo_paused = False
@@ -723,7 +765,9 @@ algo_paused = False
 
 go = True
 while go:
-	if popup1.get_active():
+	
+	if any_popup_active:
+		
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				sys.exit()
@@ -733,27 +777,36 @@ while go:
 				mousebutton = event.button
 				
 				if mousebutton == 1:
-					if popup1.get_quitbutton().rect.collidepoint(event.pos):
-						
-						popup1.deactivate()
-						popup1.reset()
-						
-					elif popup1.get_topbox().collidepoint(event.pos):
-						popup1.set_moving(True)
-						
-					elif popup1.rect.collidepoint(event.pos):
+					for popup in popuplist:
+						if popup.get_active():
+							if popup.get_quitbutton().rect.collidepoint(event.pos):
+								
+								popup.deactivate()
+								popup.reset()
+								
+								
+							
+							elif popup.get_topbox().collidepoint(event.pos):
+								
+								popup.set_moving(True)
+								moving = True
+								currently_selected_popup = popup
+								
+							
+							elif popup.rect.collidepoint(event.pos):
 
-						cleargrid()
-						popup1.deactivate()
-						popup1.reset()
+								cleargrid()
+								popup.deactivate()
+								popup.reset()
 						
-			if event.type == pygame.MOUSEBUTTONUP and popup1.get_moving():
-				popup1.set_moving(False)
+			if event.type == pygame.MOUSEBUTTONUP and moving:
+				currently_selected_popup.set_moving(False)
+				moving = False
 			
-			if event.type == pygame.MOUSEMOTION and popup1.get_moving():
+			if event.type == pygame.MOUSEMOTION and moving:
 				
-				popup1.update(event.rel[0],event.rel[1])
-		
+				currently_selected_popup.update(event.rel[0],event.rel[1])
+					
 	else:					
 		#Build mode
 
@@ -802,7 +855,8 @@ while go:
 
 							elif helpbutton.rect.collidepoint(event.pos):
 								reset_line()
-								pass
+								build_help_popup.activate()
+								
 							elif savebutton.rect.collidepoint(event.pos):
 								reset_line()
 								save_current_level()
@@ -829,6 +883,7 @@ while go:
 							elif trashbutton.rect.collidepoint(event.pos):#
 								reset_line()
 								popup1.activate()
+								
 							
 				
 					
