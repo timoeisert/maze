@@ -36,12 +36,13 @@ class StateButton(Button):
 
 
 class Popup:
-	def __init__(self,xpos,ypos,length,height,crossimg,active):
+	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext):
 		self.rect = pygame.Rect(xpos,ypos,length,height)
 		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
 		self.active = active
 		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
 		self.moving = False
+		self.displaytext = displaytext
 		self.reset()
 	def activate(self):
 		global any_popup_active
@@ -70,6 +71,8 @@ class Popup:
 		self.moving = moving
 	def get_moving(self):
 		return self.moving
+	def get_displaytext(self):
+		return self.displaytext
 	def update(self,xpos,ypos):
 		
 		self.rect.x+= xpos
@@ -87,6 +90,54 @@ class Popup:
 		pygame.draw.rect(screen,(136,195,232),self.rect)
 		pygame.draw.rect(screen,(82,138,174),self.topbox)
 		self.quitbutton.draw(screen)
+	
+class PopupButton(Popup):
+	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,confirmimg,cancelimg):
+		self.rect = pygame.Rect(xpos,ypos,length,height)
+		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
+		self.confirmbutton = Button(confirmimg,(xpos+length-162),(ypos+height-42))
+		#padding: 2px on right border, 160px button1, 2px padding inbetween, 160px button2 ->324
+		self.cancelbutton = Button(cancelimg,(xpos+length-324),(ypos+height-42))
+		self.active = active
+		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
+		self.moving = False
+		self.displaytext = displaytext
+		self.reset()
+
+	def get_confirmbutton(self):
+		return self.confirmbutton
+	def get_cancelbutton(self):
+		return self.cancelbutton	
+	def reset(self):
+		self.rect.center = (512,512)
+		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
+		self.confirmbutton.set_pos((self.rect.x+self.rect.width-170),(self.rect.y+self.rect.height-90))
+		self.cancelbutton.set_pos((self.rect.x+self.rect.width-340),(self.rect.y+self.rect.height-90))
+		self.topbox.x =self.rect.x
+		self.topbox.y = self.rect.y
+		
+	def update(self,xpos,ypos):
+			
+			self.rect.x+= xpos
+			self.rect.y+= ypos
+			
+			if (self.rect.x > (1088 -10) or self.rect.y > (1024 - 10) or
+				self.rect.x < (10-self.rect.width) or self.rect.y < (10- self.rect.height)):
+				self.rect.center = (512,512)
+				self.moving = False
+				
+			self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
+			self.confirmbutton.set_pos((self.rect.x+self.rect.width-170),(self.rect.y+self.rect.height-90))
+			self.cancelbutton.set_pos((self.rect.x+self.rect.width-340),(self.rect.y+self.rect.height-90))
+			self.topbox.x =self.rect.x
+			self.topbox.y = self.rect.y
+			
+	def draw(self,screen):
+		pygame.draw.rect(screen,(136,195,232),self.rect)
+		pygame.draw.rect(screen,(82,138,174),self.topbox)
+		self.quitbutton.draw(screen)
+		self.confirmbutton.draw(screen)
+		self.cancelbutton.draw(screen)
 	
 
 class Node:
@@ -199,10 +250,12 @@ editmodeimg = pygame.transform.scale(pygame.image.load("editmode.png"), (64,64))
 editmodebutton = Button(editmodeimg,1024, 0)
 
 crossimg = pygame.transform.scale(pygame.image.load("cross.png"),(32,32))
-popup1 = Popup(512,128,400,265,crossimg,False)
+confirmimg = pygame.image.load("continue.png")
+cancelimg = pygame.image.load("cancel.png")
+clear_matrix_popup = PopupButton(512,128,500,300,crossimg,False,"clear_grid",confirmimg,cancelimg)
 
-build_help_popup = Popup(512,128,600,700,crossimg,False)
-popuplist = [build_help_popup,popup1]
+build_help_popup = Popup(512,128,600,700,crossimg,False,"build_help")
+popuplist = [build_help_popup,clear_matrix_popup]
 
 
 
@@ -238,9 +291,18 @@ stack_global = []
 visited_tiles_global = {}
 visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
 
+all_text = {
+	"clear_grid":"Do you really want to \nclear the grid?\nThis action cannot be undone!",
+	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!"
+}
+
+
+
+
 
 #Text Renderer
 text_font = pygame.font.SysFont("Arial",24)
+font_big = pygame.font.SysFont("MsSansSerif",46)
 text_cache = {}
 
 def get_textmsg(msg, colour):
@@ -744,7 +806,8 @@ def draw():
 	for popup in popuplist:
 		if popup.get_active():
 			popup.draw(screen)
-			blit_text(screen, text, popup.get_rect(), text_font)
+			popuptext = all_text[popup.get_displaytext()]
+			blit_text(screen, popuptext, popup.get_rect(), font_big)
 	
 		
 
@@ -784,6 +847,15 @@ while go:
 				if mousebutton == 1:
 					for popup in popuplist:
 						if popup.get_active():
+							#Bonus actions for ButtonPopup
+							if type(popup).__name__ == "PopupButton":
+								if popup.get_confirmbutton().rect.collidepoint(event.pos):
+									cleargrid()
+									popup.deactivate()
+									popup.reset()
+								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
+									popup.deactivate()
+									popup.reset()
 							if popup.get_quitbutton().rect.collidepoint(event.pos):
 								
 								popup.deactivate()
@@ -797,13 +869,13 @@ while go:
 								moving = True
 								currently_selected_popup = popup
 								
-							
+							"""
 							elif popup.rect.collidepoint(event.pos):
 
 								cleargrid()
 								popup.deactivate()
 								popup.reset()
-						
+							"""
 			if event.type == pygame.MOUSEBUTTONUP and moving:
 				currently_selected_popup.set_moving(False)
 				moving = False
@@ -887,7 +959,7 @@ while go:
 								selected_block = 3
 							elif trashbutton.rect.collidepoint(event.pos):#
 								reset_line()
-								popup1.activate()
+								clear_matrix_popup.activate()
 								
 							
 				
