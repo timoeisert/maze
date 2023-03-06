@@ -236,7 +236,7 @@ algotimer = Timer(speedtimes[0])
 
 stack_global = []
 visited_tiles_global = {}
-
+visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
 
 
 #Text Renderer
@@ -438,7 +438,8 @@ def iterative_dfs(visited_tiles,s,g):
 			"""
 
 
-def dfs_step(stack,visited_tiles,g):
+def dfs_step(stack,visited_tiles,visited_matrix,g):
+	new_on_stack = []
 	if stack:
 		
 		#Takes nodes off the stack until an unvisited node is found. Without this, the porgram sometimes appears to do nothing,
@@ -446,51 +447,54 @@ def dfs_step(stack,visited_tiles,g):
 		while True:
 			if stack:
 				v = stack.pop(-1)
-				if not (v[0] in visited_tiles.keys()):
+				if not (visited_matrix[v[0][0]][v[0][1]]):
 					break
 			else:
-				return stack, visited_tiles, False
+				return stack, visited_tiles,visited_matrix, False, None, []
 		
 		
 		#If vertex has not been visited yet (vertecies can be added to stack more than once)
 		
+		#Adding to visited_tiles should only be O(1)
 		visited_tiles[v[0]] = v[1]
+		visited_matrix[v[0][0]][v[0][1]] = True
 		if v[0] == g:
 		
-			return stack, visited_tiles, True
+			return stack, visited_tiles,visited_matrix, True, v[0], new_on_stack
 		#List of tuples (x,y) of coordinates
 		tileneighbors = get_neighbors(v[0])
 		tileneighbors.reverse()
 		#Iterates through each neighbor
 		for neighbor in tileneighbors:
 			if matrix[neighbor[0]][neighbor[1]] != 1:
-				if not neighbor in visited_tiles.keys():
-					
+				if not visited_matrix[neighbor[0]][neighbor[1]]:
+					new_on_stack.append(neighbor)
 					stack.append((neighbor,v[0]))
 
-		return stack, visited_tiles, False
+		return stack, visited_tiles, visited_matrix, False, v[0], new_on_stack
 	else:
-		return stack, visited_tiles, False
+		return stack, visited_tiles, visited_matrix, True, None, []
 	
 
 
-def dfs_algorun(algo_started, algo_finished, selected_algorithm,stack,visited_tiles,startlocation,goallocation):
+def dfs_algorun(algo_started, algo_finished, selected_algorithm,stack,visited_tiles,visited_matrix,startlocation,goallocation):
 	if selected_algorithm == 0:
 		if not algo_finished:
 			if algo_started == False:
 				stack.append((startlocation,None))
 				algo_started = True
-			stack, visited_tiles, algo_finished = dfs_step(stack,visited_tiles,goallocation)
+			stack, visited_tiles,visited_matrix, algo_finished, new_visited, new_stack = dfs_step(stack,visited_tiles,visited_matrix,goallocation)
 
-			for stacktile in stack:
-				addblock(stacktile[0],5)
-			addblock(stack[-1][0],6)
+			if new_stack:
+				for stacktile in new_stack:
+					addblock(stacktile,5)
+				addblock(new_stack[-1],6)
 
-			for visitedtile in visited_tiles.keys():
-				addblock(visitedtile, 4)
+			if new_visited:
+				addblock(new_visited, 4)
 			
 			
-	return algo_started, algo_finished, stack, visited_tiles
+	return algo_started, algo_finished, stack, visited_tiles, visited_matrix
 
 
 
@@ -644,14 +648,15 @@ def naiveline(point1,point2):
 	return plottedcoords		
 
 #DRAW FUNTION
-def reset_algo(visited_tiles,stack,algostarted,algopaused,algofinished):
+def reset_algo(visited_tiles,stack,visited_matrix_global,algostarted,algopaused,algofinished):
 	visited_tiles = {}
 	stack = []
+	visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
 	algostarted = False
 	algopaused = False
 	algofinished = False
 	algotimer.set_time(algotimer.get_intervaltime())
-	return visited_tiles,stack,algostarted,algopaused,algofinished
+	return visited_tiles,stack,visited_matrix_global,algostarted,algopaused,algofinished
 
 def reset_playmode():
 	gopausebutton.set_state(0)
@@ -962,8 +967,8 @@ while go:
 						if mousebutton == 1:
 							if editmodebutton.rect.collidepoint(event.pos):
 								reset_playmode()
-								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
-									visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+								visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished = reset_algo(
+									visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished)
 								matrix = copy.deepcopy(backupmatrix)
 								gamemode = 0
 							elif speedbutton.rect.collidepoint(event.pos):
@@ -988,8 +993,8 @@ while go:
 									#If algo is being started for the first time
 									else:
 										algotimer.set_time(algotimer.get_intervaltime())
-										algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
-											False,False,0,stack_global,visited_tiles_global,startlocation,goallocation)
+										algo_started, algo_finished, stack_global, visited_tiles_global, visited_matrix_global = dfs_algorun(
+											False,False,0,stack_global,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
 									
 
 
@@ -999,15 +1004,15 @@ while go:
 									algo_paused = True
 									
 								elif gopausebutton.get_state() == 2:
-									visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
-										visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+									visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished = reset_algo(
+										visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished)
 									matrix = copy.deepcopy(backupmatrix)
 									gopausebutton.set_state(0)
 									gopausebutton.set_image(goimg)
 									
 							elif stopbutton.rect.collidepoint(event.pos):
-								visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished = reset_algo(
-									visited_tiles_global,stack_global,algo_started,algo_paused,algo_finished)
+								visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished = reset_algo(
+									visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished)
 								matrix = copy.deepcopy(backupmatrix)
 								gopausebutton.set_state(0)
 								gopausebutton.set_image(goimg)			
@@ -1097,8 +1102,8 @@ while go:
 					intervaltime = algotimer.get_intervaltime()
 					currenttime = algotimer.get_time()
 					if currenttime == 0:
-						algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
-							algo_started,algo_finished,0,stack_global,visited_tiles_global,startlocation,goallocation)	
+						algo_started, algo_finished, stack_global, visited_tiles_global, visited_matrix_global = dfs_algorun(
+							algo_started,algo_finished,0,stack_global,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
 					
 					#If timer > 0 subtract 1
 					if currenttime > 0:
@@ -1116,6 +1121,7 @@ while go:
 					print(visited_tiles_global)
 					stack_global = []
 					visited_tiles_global = []
+					visited_matrix_global = []
 				
 								
 	draw()	
