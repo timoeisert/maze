@@ -25,3 +25,21 @@ Standardmäßig dfs
 Standard geschwindigkeit ist 1
 drückt der user auf play, startet der algorithmus
 mit pause wird der timer pausiert
+
+Use dict for different texts, -> keyword für texte, zb "helpbuildmode" um sie zu finden.
+
+Setzt man die intervaltime auf 0 wird jeden frame ein neues tile zu visited tiles hinzugefügt. 
+Das Problem: visited tiles ist ein dict und im zu testen ob ein tile bereits besucht wurde wird geschaut ob
+das tile in visitedtiles.keys() zu finden ist. Diese Liste wird mit der Zeit immer größer O(n).
+Bei gridsize 64 brauchen die ersten 128 tiles ca 1 sek. (Da es 120fps gibt und ein neues Tile pro frame hinzugefügt wird).
+Danach wird es aber deutlich langsamer. 
+Das eintragen in visitedtiles ist O(1). Das auslesen ist O(n). Lösung -> Zwar ins dict eintragen, aber eine 
+Matrix zu führen in der für jedes tile drinne steht, ob sie schon besucht wurde. Zugriff auf Matrix[i][j] ist O(1)
+Eintragen ist auch O(1).
+
+Test:
+Alter Algorithmus mit dict:
+64x64 = 4096 Felder durchlaufen in ~2:17 = 137 Sekunden
+Theoretisches Minimum:
+4096 Felder, 120 Felder pro Sekunde -> 4096 / 120 = ~34 Sekunden
+

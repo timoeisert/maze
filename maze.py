@@ -135,7 +135,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 16
+gridsize = 64
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -231,7 +231,7 @@ speedbutton = StateButton(speed1img,1024,(5*64), 1)
 
 linetempimg = pygame.image.load("linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
-speedtimes = [80,40,10]
+speedtimes = [80,40,0]
 algotimer = Timer(speedtimes[0])
 
 stack_global = []
@@ -240,7 +240,7 @@ visited_tiles_global = {}
 
 
 #Text Renderer
-text_font = pygame.font.SysFont("Arial",30)
+text_font = pygame.font.SysFont("Arial",24)
 text_cache = {}
 
 def get_textmsg(msg, colour):
@@ -1116,6 +1116,7 @@ while go:
 					print(visited_tiles_global)
 					stack_global = []
 					visited_tiles_global = []
+				
 								
 	draw()	
 	pygame.display.update()
