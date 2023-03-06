@@ -191,6 +191,7 @@ editmodebutton = Button(editmodeimg,1024, 0)
 
 crossimg = pygame.transform.scale(pygame.image.load("cross.png"),(32,32))
 popup1 = Popup(512,128,400,265,crossimg,False)
+popup1.reset()
 
 
 
@@ -623,6 +624,13 @@ def reset_playmode():
 	speedbutton.set_state(currentspeed)
 	speedbutton.set_image(speedimgs[currentspeed])
 	algotimer.set_intervaltime(speedtimes[currentspeed -1])
+
+def reset_line():
+	global linecoords,linestartcoords,lineendcoords, middle_mouse_clicked
+	linecoords = []
+	linestartcoords = None
+	lineendcoords = None
+	middle_mouse_clicked = False
 	
 def draw():
 	#Background
@@ -777,6 +785,8 @@ while go:
 						elif mousebutton == 2:
 							middle_mouse_clicked = True
 							linestartcoords = clicked_tile
+							lineendcoords = clicked_tile
+							linecoords = naiveline(linestartcoords,lineendcoords)
 
 						elif mousebutton == 3:
 							right_mouse_clicked = True
@@ -786,14 +796,18 @@ while go:
 					else:
 						if mousebutton == 1:
 							if playmodebutton.rect.collidepoint(event.pos):
+								reset_line()
 								backupmatrix = copy.deepcopy(matrix)
 								gamemode = 1
 
 							elif helpbutton.rect.collidepoint(event.pos):
+								reset_line()
 								pass
 							elif savebutton.rect.collidepoint(event.pos):
+								reset_line()
 								save_current_level()
 							elif loadbutton.rect.collidepoint(event.pos):
+								reset_line()
 								matrix = load_saved_level()
 								for x in range(gridsize):
 									for y in range(gridsize):
@@ -804,12 +818,16 @@ while go:
 											goalplaced = True
 											goallocation = (x,y)
 							elif wallbutton.rect.collidepoint(event.pos):
+								reset_line()
 								selected_block = 1
 							elif startbutton.rect.collidepoint(event.pos):
+								reset_line()
 								selected_block = 2
 							elif goalbutton.rect.collidepoint(event.pos):
+								reset_line()
 								selected_block = 3
-							elif trashbutton.rect.collidepoint(event.pos):
+							elif trashbutton.rect.collidepoint(event.pos):#
+								reset_line()
 								popup1.activate()
 							
 				
@@ -821,7 +839,7 @@ while go:
 					if mousebutton == 1:
 						left_mouse_clicked = False
 					
-					elif mousebutton == 2:
+					elif mousebutton == 2 and middle_mouse_clicked:
 						if mousepos[0] < 1024 and mousepos[1] < 1024:
 							middle_mouse_clicked = False
 							lineendcoords = clicked_tile
@@ -914,6 +932,7 @@ while go:
 										algo_paused = False
 									#If algo is being started for the first time
 									else:
+										algotimer.set_time(algotimer.get_intervaltime())
 										algo_started, algo_finished, stack_global, visited_tiles_global = dfs_algorun(
 											False,False,0,stack_global,visited_tiles_global,startlocation,goallocation)
 									
