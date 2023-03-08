@@ -36,13 +36,14 @@ class StateButton(Button):
 
 
 class Popup:
-	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext):
+	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,popid):
 		self.rect = pygame.Rect(xpos,ypos,length,height)
 		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
 		self.active = active
 		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
 		self.moving = False
 		self.displaytext = displaytext
+		self.popid = popid
 		self.reset()
 	def activate(self):
 		global any_popup_active
@@ -62,6 +63,8 @@ class Popup:
 		return self.quitbutton
 	def get_topbox(self):
 		return self.topbox
+	def get_popid(self):
+		return self.popid
 	def reset(self):
 		self.rect.center = (512,512)
 		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
@@ -90,18 +93,63 @@ class Popup:
 		pygame.draw.rect(screen,(136,195,232),self.rect)
 		pygame.draw.rect(screen,(82,138,174),self.topbox)
 		self.quitbutton.draw(screen)
-	
-class PopupButton(Popup):
-	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,confirmimg,cancelimg):
+class PopupOneButton(Popup):
+	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,popid,okimg):
 		self.rect = pygame.Rect(xpos,ypos,length,height)
 		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
-		self.confirmbutton = Button(confirmimg,(xpos+length-162),(ypos+height-42))
-		#padding: 2px on right border, 160px button1, 2px padding inbetween, 160px button2 ->324
-		self.cancelbutton = Button(cancelimg,(xpos+length-324),(ypos+height-42))
+		self.okbutton = Button(okimg,(xpos+length-110),(ypos+height-90))
+		#padding: 2px on right border, 100px button1
+		
 		self.active = active
 		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
 		self.moving = False
 		self.displaytext = displaytext
+		self.popid = popid
+		self.reset()
+
+	def get_okbutton(self):
+		return self.okbutton	
+	def reset(self):
+		self.rect.center = (512,512)
+		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
+		self.okbutton.set_pos((self.rect.x+self.rect.width-110),(self.rect.y+self.rect.height-90))
+		
+		self.topbox.x =self.rect.x
+		self.topbox.y = self.rect.y
+		
+	def update(self,xpos,ypos):
+			
+		self.rect.x+= xpos
+		self.rect.y+= ypos
+		
+		if (self.rect.x > (1088 -10) or self.rect.y > (1024 - 10) or
+			self.rect.x < (10-self.rect.width) or self.rect.y < (10- self.rect.height)):
+			self.rect.center = (512,512)
+			self.moving = False
+			
+		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
+		self.okbutton.set_pos((self.rect.x+self.rect.width-110),(self.rect.y+self.rect.height-90))
+		
+		self.topbox.x =self.rect.x
+		self.topbox.y = self.rect.y
+	def draw(self,screen):
+		pygame.draw.rect(screen,(136,195,232),self.rect)
+		pygame.draw.rect(screen,(82,138,174),self.topbox)
+		self.quitbutton.draw(screen)
+		self.okbutton.draw(screen)
+	
+class PopupButton(Popup):
+	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,popid,confirmimg,cancelimg):
+		self.rect = pygame.Rect(xpos,ypos,length,height)
+		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
+		self.confirmbutton = Button(confirmimg,(xpos+length-162),(ypos+height-90))
+		#padding: 2px on right border, 160px button1, 2px padding inbetween, 160px button2 ->324
+		self.cancelbutton = Button(cancelimg,(xpos+length-324),(ypos+height-90))
+		self.active = active
+		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
+		self.moving = False
+		self.displaytext = displaytext
+		self.popid = popid
 		self.reset()
 
 	def get_confirmbutton(self):
@@ -186,7 +234,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 64
+gridsize = 32
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -252,10 +300,13 @@ editmodebutton = Button(editmodeimg,1024, 0)
 crossimg = pygame.transform.scale(pygame.image.load("cross.png"),(32,32))
 confirmimg = pygame.image.load("continue.png")
 cancelimg = pygame.image.load("cancel.png")
-clear_matrix_popup = PopupButton(512,128,500,300,crossimg,False,"clear_grid",confirmimg,cancelimg)
+okimg = pygame.image.load("ok.png")
+clear_matrix_popup = PopupButton(512,128,500,300,crossimg,False,"clear_grid","clear_matrix_popup",confirmimg,cancelimg)
 
-build_help_popup = Popup(512,128,600,700,crossimg,False,"build_help")
-popuplist = [build_help_popup,clear_matrix_popup]
+build_help_popup = PopupOneButton(512,128,600,700,crossimg,False,"build_help","build_help_popup",okimg)
+
+start_goal_placed_popup = PopupOneButton(512,128,500,300,crossimg,False,"startgoal_placed","start_goal_placed_popup",okimg)
+popuplist = [build_help_popup,clear_matrix_popup,start_goal_placed_popup]
 
 
 
@@ -293,7 +344,8 @@ visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsiz
 
 all_text = {
 	"clear_grid":"Do you really want to \nclear the grid?\nThis action cannot be undone!",
-	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!"
+	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!",
+	"startgoal_placed":"You need to place the start tile and the goal tile before you can switch into algo-mode!"
 }
 
 
@@ -319,7 +371,7 @@ def blit_text(screen, text, popuprect, font, color=pygame.Color('black')):
     space = font.size(' ')[0]  # The width of a space.
     #plus padding of 10 on both sides
     x = popuprect[0] + 10
-    y = popuprect[1] + 40
+    y = popuprect[1] + 60
     #x coordinate + width of popup
     max_width = popuprect[2] + popuprect[0] - 10
     #max_height = surface.get_size()
@@ -328,6 +380,7 @@ def blit_text(screen, text, popuprect, font, color=pygame.Color('black')):
         for word in line:
             word_surface = font.render(word, 1, color)
             word_width, word_height = word_surface.get_size()
+            word_height  += 10
             if x + word_width >= max_width:
                 x = popuprect[0] +10  # Reset the x.
                 y += word_height  # Start on new row.
@@ -848,12 +901,17 @@ while go:
 					for popup in popuplist:
 						if popup.get_active():
 							#Bonus actions for ButtonPopup
-							if type(popup).__name__ == "PopupButton":
+							if popup.get_popid() == "clear_matrix_popup":
 								if popup.get_confirmbutton().rect.collidepoint(event.pos):
 									cleargrid()
 									popup.deactivate()
 									popup.reset()
 								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
+									popup.deactivate()
+									popup.reset()
+							
+							if popup.get_popid()== "start_goal_placed_popup":
+								if popup.get_okbutton().rect.collidepoint(event.pos):
 									popup.deactivate()
 									popup.reset()
 							if popup.get_quitbutton().rect.collidepoint(event.pos):
@@ -927,8 +985,11 @@ while go:
 						if mousebutton == 1:
 							if playmodebutton.rect.collidepoint(event.pos):
 								reset_line()
-								backupmatrix = copy.deepcopy(matrix)
-								gamemode = 1
+								if goalplaced and startplaced:
+									backupmatrix = copy.deepcopy(matrix)
+									gamemode = 1
+								else:
+									start_goal_placed_popup.activate()
 
 							elif helpbutton.rect.collidepoint(event.pos):
 								reset_line()
