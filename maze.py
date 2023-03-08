@@ -20,10 +20,7 @@ class Button:
 	
 class StateButton(Button):
 	def __init__(self, image, xpos, ypos, state):
-		self.image = image
-		self.rect = self.image.get_rect()
-		self.rect.x = xpos
-		self.rect.y = ypos
+		super().__init__(image, xpos, ypos)
 		#Pauseplaybutton states: 0 -> play, 1 -> pause, 2 -> replay
 		#Speedbutton states:1
 		self.state = state
@@ -44,7 +41,7 @@ class Popup:
 		self.moving = False
 		self.displaytext = displaytext
 		self.popid = popid
-		self.reset()
+	
 	def activate(self):
 		global any_popup_active
 		
@@ -93,97 +90,52 @@ class Popup:
 		pygame.draw.rect(screen,(136,195,232),self.rect)
 		pygame.draw.rect(screen,(82,138,174),self.topbox)
 		self.quitbutton.draw(screen)
+		
 class PopupOneButton(Popup):
 	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,popid,okimg):
-		self.rect = pygame.Rect(xpos,ypos,length,height)
-		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
+		super().__init__(xpos,ypos,length,height,crossimg,active,displaytext,popid)
 		self.okbutton = Button(okimg,(xpos+length-110),(ypos+height-90))
 		#padding: 2px on right border, 100px button1
-		
-		self.active = active
-		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
-		self.moving = False
-		self.displaytext = displaytext
-		self.popid = popid
-		self.reset()
 
 	def get_okbutton(self):
 		return self.okbutton	
 	def reset(self):
-		self.rect.center = (512,512)
-		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
-		self.okbutton.set_pos((self.rect.x+self.rect.width-110),(self.rect.y+self.rect.height-90))
+		super().reset()
 		
-		self.topbox.x =self.rect.x
-		self.topbox.y = self.rect.y
+		self.okbutton.set_pos((self.rect.x+self.rect.width-110),(self.rect.y+self.rect.height-90))
 		
 	def update(self,xpos,ypos):
-			
-		self.rect.x+= xpos
-		self.rect.y+= ypos
+		super().update(xpos,ypos)
 		
-		if (self.rect.x > (1088 -10) or self.rect.y > (1024 - 10) or
-			self.rect.x < (10-self.rect.width) or self.rect.y < (10- self.rect.height)):
-			self.rect.center = (512,512)
-			self.moving = False
-			
-		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
 		self.okbutton.set_pos((self.rect.x+self.rect.width-110),(self.rect.y+self.rect.height-90))
 		
-		self.topbox.x =self.rect.x
-		self.topbox.y = self.rect.y
 	def draw(self,screen):
-		pygame.draw.rect(screen,(136,195,232),self.rect)
-		pygame.draw.rect(screen,(82,138,174),self.topbox)
-		self.quitbutton.draw(screen)
+		super().draw(screen)
 		self.okbutton.draw(screen)
 	
 class PopupButton(Popup):
 	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,popid,confirmimg,cancelimg):
-		self.rect = pygame.Rect(xpos,ypos,length,height)
-		self.quitbutton = Button(crossimg,(xpos+length-32-2),(ypos+2))
+		super().__init__(xpos,ypos,length,height,crossimg,active,displaytext,popid)	
 		self.confirmbutton = Button(confirmimg,(xpos+length-162),(ypos+height-90))
 		#padding: 2px on right border, 160px button1, 2px padding inbetween, 160px button2 ->324
 		self.cancelbutton = Button(cancelimg,(xpos+length-324),(ypos+height-90))
-		self.active = active
-		self.topbox = pygame.Rect(self.rect.x,self.rect.y,self.rect.width,36)
-		self.moving = False
-		self.displaytext = displaytext
-		self.popid = popid
-		self.reset()
 
 	def get_confirmbutton(self):
 		return self.confirmbutton
 	def get_cancelbutton(self):
 		return self.cancelbutton	
 	def reset(self):
-		self.rect.center = (512,512)
-		self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
+		super().reset()
 		self.confirmbutton.set_pos((self.rect.x+self.rect.width-170),(self.rect.y+self.rect.height-90))
 		self.cancelbutton.set_pos((self.rect.x+self.rect.width-340),(self.rect.y+self.rect.height-90))
-		self.topbox.x =self.rect.x
-		self.topbox.y = self.rect.y
 		
 	def update(self,xpos,ypos):
-			
-			self.rect.x+= xpos
-			self.rect.y+= ypos
-			
-			if (self.rect.x > (1088 -10) or self.rect.y > (1024 - 10) or
-				self.rect.x < (10-self.rect.width) or self.rect.y < (10- self.rect.height)):
-				self.rect.center = (512,512)
-				self.moving = False
-				
-			self.quitbutton.set_pos((self.rect.x + self.rect.width - 34),(self.rect.y + 2))
-			self.confirmbutton.set_pos((self.rect.x+self.rect.width-170),(self.rect.y+self.rect.height-90))
-			self.cancelbutton.set_pos((self.rect.x+self.rect.width-340),(self.rect.y+self.rect.height-90))
-			self.topbox.x =self.rect.x
-			self.topbox.y = self.rect.y
+		super().update(xpos,ypos)
+		self.confirmbutton.set_pos((self.rect.x+self.rect.width-170),(self.rect.y+self.rect.height-90))
+		self.cancelbutton.set_pos((self.rect.x+self.rect.width-340),(self.rect.y+self.rect.height-90))
 			
 	def draw(self,screen):
-		pygame.draw.rect(screen,(136,195,232),self.rect)
-		pygame.draw.rect(screen,(82,138,174),self.topbox)
-		self.quitbutton.draw(screen)
+		super().draw(screen)
 		self.confirmbutton.draw(screen)
 		self.cancelbutton.draw(screen)
 	
@@ -211,10 +163,6 @@ class Timer:
 		self.intervaltime = intervaltime
 	def get_intervaltime(self):
 		return self.intervaltime
-
-
-
-
 
 
 
