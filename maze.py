@@ -278,13 +278,13 @@ speed1img = pygame.image.load("speed1.png")
 speed2img = pygame.image.load("speed2.png")
 speed3img = pygame.image.load("speed3.png")
 speedimgs = [speed0img,speed1img,speed2img,speed3img]
-speedbutton = StateButton(speed1img,1024,(5*64), 1)
+speedbutton = StateButton(speed1img,1024,(5*64),1)
 
 
 linetempimg = pygame.image.load("linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
-speedtimes = [80,40,0]
-algotimer = Timer(speedtimes[0])
+speedtimes = [80,30,10,0]
+algotimer = Timer(speedtimes[1])
 
 stack_global = []
 visited_tiles_global = {}
@@ -728,7 +728,7 @@ def reset_playmode():
 	currentspeed = 1
 	speedbutton.set_state(currentspeed)
 	speedbutton.set_image(speedimgs[currentspeed])
-	algotimer.set_intervaltime(speedtimes[currentspeed -1])
+	algotimer.set_intervaltime(speedtimes[currentspeed])
 
 def reset_line():
 	global linecoords,linestartcoords,lineendcoords, middle_mouse_clicked
@@ -1057,12 +1057,12 @@ while go:
 								if currentspeed < 3:
 									speedbutton.set_state(currentspeed + 1)
 									speedbutton.set_image(speedimgs[currentspeed + 1])
-									algotimer.set_intervaltime(speedtimes[currentspeed])
+									algotimer.set_intervaltime(speedtimes[currentspeed+1])
 								else:
-									currentspeed = 1
+									currentspeed = 0
 									speedbutton.set_state(currentspeed)
 									speedbutton.set_image(speedimgs[currentspeed])
-									algotimer.set_intervaltime(speedtimes[currentspeed -1])
+									algotimer.set_intervaltime(speedtimes[currentspeed])
 									
 							elif gopausebutton.rect.collidepoint(event.pos):
 								if gopausebutton.get_state() == 0:
