@@ -220,7 +220,8 @@ playmodeimg = pygame.image.load("playmodev2.png")
 playmodebutton = Button(playmodeimg,1024, 0)
 
 helpimg = pygame.image.load("help.png")
-helpbutton = Button(helpimg, 1024,(1*64))
+buildhelpbutton = Button(helpimg, 1024,(1*64))
+algohelpbutton = Button(helpimg,1024,(1*64))
 
 saveimg = pygame.image.load("savev2.png")
 savebutton = Button(saveimg, 1024, (3*64))
@@ -250,11 +251,14 @@ confirmimg = pygame.image.load("continue.png")
 cancelimg = pygame.image.load("cancel.png")
 okimg = pygame.image.load("ok.png")
 clear_matrix_popup = PopupButton(512,128,500,300,crossimg,False,"clear_grid","clear_matrix_popup",confirmimg,cancelimg)
-
+clear_matrix_popup.reset()
 build_help_popup = PopupOneButton(512,128,600,700,crossimg,False,"build_help","build_help_popup",okimg)
-
+build_help_popup.reset()
+algo_help_popup = PopupOneButton(512,128,600,700,crossimg,False,"algo_help","algo_help_popup",okimg)
+algo_help_popup.reset()
 start_goal_placed_popup = PopupOneButton(512,128,500,300,crossimg,False,"startgoal_placed","start_goal_placed_popup",okimg)
-popuplist = [build_help_popup,clear_matrix_popup,start_goal_placed_popup]
+start_goal_placed_popup.reset()
+popuplist = [build_help_popup,algo_help_popup,clear_matrix_popup,start_goal_placed_popup]
 
 
 
@@ -280,6 +284,11 @@ speed3img = pygame.image.load("speed3.png")
 speedimgs = [speed0img,speed1img,speed2img,speed3img]
 speedbutton = StateButton(speed1img,1024,(5*64),1)
 
+dfsimg = pygame.image.load("dfs.png")
+dfsbutton = Button(dfsimg, 1024,(14*64))
+
+bfsimg = pygame.image.load("bfs.png")
+bfsbutton = Button(bfsimg,1024,(15*64))
 
 linetempimg = pygame.image.load("linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
@@ -293,6 +302,7 @@ visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsiz
 all_text = {
 	"clear_grid":"Do you really want to \nclear the grid?\nThis action cannot be undone!",
 	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!",
+	"algo_help":"Hier steht irgendwann mal eine Anleitung zum Algostuff. Bleibt gespannt!!!!!",
 	"startgoal_placed":"You need to place the start tile and the goal tile before you can switch into algo-mode!"
 }
 
@@ -743,7 +753,7 @@ def draw():
 	
 	if gamemode == 0:
 		playmodebutton.draw(screen)
-		helpbutton.draw(screen)
+		buildhelpbutton.draw(screen)
 		savebutton.draw(screen)
 		loadbutton.draw(screen)
 		goalbutton.draw(screen)
@@ -756,10 +766,13 @@ def draw():
 		
 	elif gamemode == 1:
 		editmodebutton.draw(screen)
+		algohelpbutton.draw(screen)
 		speedbutton.draw(screen)
 		gopausebutton.draw(screen)
 		if algo_started:
 			stopbutton.draw(screen)
+		dfsbutton.draw(screen)
+		bfsbutton.draw(screen)
 	#pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
 	#pygame.draw.rect(screen, (109,162,255), (1088-4,0,4,1024))
 	
@@ -823,7 +836,7 @@ def draw():
 
 
 
-
+okbuttonlist = ["start_goal_placed_popup","build_help_popup","algo_help_popup"]
 any_popup_active = False
 currently_selected_popup = None
 moving = False
@@ -848,8 +861,9 @@ while go:
 				if mousebutton == 1:
 					for popup in popuplist:
 						if popup.get_active():
+							selectedpopupid = popup.get_popid()
 							#Bonus actions for ButtonPopup
-							if popup.get_popid() == "clear_matrix_popup":
+							if selectedpopupid == "clear_matrix_popup":
 								if popup.get_confirmbutton().rect.collidepoint(event.pos):
 									cleargrid()
 									popup.deactivate()
@@ -858,7 +872,7 @@ while go:
 									popup.deactivate()
 									popup.reset()
 							
-							if popup.get_popid()== "start_goal_placed_popup":
+							if selectedpopupid in okbuttonlist:
 								if popup.get_okbutton().rect.collidepoint(event.pos):
 									popup.deactivate()
 									popup.reset()
@@ -939,7 +953,7 @@ while go:
 								else:
 									start_goal_placed_popup.activate()
 
-							elif helpbutton.rect.collidepoint(event.pos):
+							elif buildhelpbutton.rect.collidepoint(event.pos):
 								reset_line()
 								build_help_popup.activate()
 								
@@ -1052,6 +1066,10 @@ while go:
 									visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished)
 								matrix = copy.deepcopy(backupmatrix)
 								gamemode = 0
+								
+							elif algohelpbutton.rect.collidepoint(event.pos):	
+								algo_help_popup.activate()
+								
 							elif speedbutton.rect.collidepoint(event.pos):
 								currentspeed = speedbutton.get_state()
 								if currentspeed < 3:
