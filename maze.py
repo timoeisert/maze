@@ -3,6 +3,7 @@ import sys
 import math
 import pickle
 import copy
+from collections import deque
 
 
 class Button:
@@ -194,7 +195,7 @@ tilewidth = tiles - 4
 
 #0-> build mode, 1 -> pathfind mode
 gamemode = 0
-selected_algorithm = 3
+selected_algorithm = 0
 left_mouse_clicked = False
 right_mouse_clicked = False
 middle_mouse_clicked = False
@@ -266,8 +267,8 @@ popuplist = [build_help_popup,algo_help_popup,clear_matrix_popup,start_goal_plac
 
 
 
-
-
+skipimg = pygame.image.load("skip.png")
+skipbutton = Button(skipimg,1024,(4*64))
 goimg = pygame.image.load("go.png")
 pauseimg = pygame.image.load("pause.png")
 resetimg = pygame.image.load("reset.png")
@@ -292,11 +293,13 @@ bfsbutton = Button(bfsimg,1024,(15*64))
 
 linetempimg = pygame.image.load("linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
-speedtimes = [80,30,10,0]
+speedtimes = [80,30,5,1]
 algotimer = Timer(speedtimes[1])
 
 stack_global = []
+queue_global = deque()
 visited_tiles_global = {}
+goal_found = False
 visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
 
 all_text = {
@@ -512,6 +515,7 @@ def iterative_dfs(visited_tiles,s,g):
 
 
 def dfs_step(stack,visited_tiles,visited_matrix,g):
+	#return: stacl, visited_tiles, visited_matrix, algo_finished, goal found, new_visited, new_stack 
 	new_on_stack = []
 	if stack:
 		
@@ -523,7 +527,7 @@ def dfs_step(stack,visited_tiles,visited_matrix,g):
 				if not (visited_matrix[v[0][0]][v[0][1]]):
 					break
 			else:
-				return stack, visited_tiles,visited_matrix, False, None, []
+				return stack, visited_tiles,visited_matrix, True,False, None, []
 		
 		
 		#If vertex has not been visited yet (vertecies can be added to stack more than once)
@@ -533,7 +537,7 @@ def dfs_step(stack,visited_tiles,visited_matrix,g):
 		visited_matrix[v[0][0]][v[0][1]] = True
 		if v[0] == g:
 		
-			return stack, visited_tiles,visited_matrix, True, v[0], new_on_stack
+			return stack, visited_tiles,visited_matrix, True,True, v[0], new_on_stack
 		#List of tuples (x,y) of coordinates
 		tileneighbors = get_neighbors(v[0])
 		tileneighbors.reverse()
@@ -544,36 +548,96 @@ def dfs_step(stack,visited_tiles,visited_matrix,g):
 					new_on_stack.append(neighbor)
 					stack.append((neighbor,v[0]))
 
-		return stack, visited_tiles, visited_matrix, False, v[0], new_on_stack
+		return stack, visited_tiles, visited_matrix, False,False, v[0], new_on_stack
 	else:
-		return stack, visited_tiles, visited_matrix, True, None, []
+		return stack, visited_tiles, visited_matrix, True,False, None, []
 	
+def bfs_step(queue,visited_tiles,visited_matrix,g):
+	#return: queue, visited_tiles, visited_matrix, algo_finished, goal found, new_visited, new_queue 
+	new_on_queue = []
+	if queue:
+		while True:
+			if queue:
+				v = queue.popleft()
+				
+				if not (visited_matrix[v[0][0]][v[0][1]]):
+					break
+			else:
+				return queue, visited_tiles, visited_matrix, True, False, None, []
+		visited_tiles[v[0]] = v[1]
+		visited_matrix[v[0][0]][v[0][1]] = True
+		if v[0] == g:
+			return queue, visited_tiles, visited_matrix, True, True, v[0], new_on_queue
+		
+		tileneighbors = get_neighbors(v[0])
+		#No need to reverse because in queue the first object is retrieved first aswell
+		for neighbor in tileneighbors:
+			if matrix[neighbor[0]][neighbor[1]] != 1:
+				if not visited_matrix[neighbor[0]][neighbor[1]]:
+					new_on_queue.append(neighbor)
+					queue.append((neighbor,v[0]))
+					
+		return queue, visited_tiles, visited_matrix, False, False, v[0], new_on_queue
+	else:
+		return queue, visited_tiles, visited_matrix, True, False, None, []
 
-
-def dfs_algorun(algo_started, algo_finished, selected_algorithm,stack,visited_tiles,visited_matrix,startlocation,goallocation):
+def algorun(algo_started, algo_finished, selected_algorithm,visited_tiles,visited_matrix,startlocation,goallocation):
+	global queue_global, stack_global, goal_found
 	if selected_algorithm == 0:
+		
 		if not algo_finished:
 			if algo_started == False:
-				stack.append((startlocation,None))
+				stack_global.append((startlocation,None))
 				algo_started = True
-			stack, visited_tiles,visited_matrix, algo_finished, new_visited, new_stack = dfs_step(stack,visited_tiles,visited_matrix,goallocation)
+			stack_global, visited_tiles,visited_matrix, algo_finished,goal_found, new_visited, new_stack = dfs_step(stack_global,visited_tiles,visited_matrix,goallocation)
 
 			if new_stack:
 				for stacktile in new_stack:
 					addblock(stacktile,5)
-				addblock(new_stack[-1],6)
+					
+				#addblock(new_stack[-1],6)
+				
 
 			if new_visited:
 				addblock(new_visited, 4)
 			
+	elif selected_algorithm == 1:
+		
+		if not algo_finished:
+			if algo_started == False:
+				queue_global.append((startlocation,None))
+				algo_started = True
+			queue_global, visited_tiles, visited_matrix, algo_finished, goal_found, new_visited, new_queue = bfs_step(queue_global,visited_tiles,visited_matrix,goallocation)
 			
-	return algo_started, algo_finished, stack, visited_tiles, visited_matrix
+			if new_queue:
+				for queuetile in new_queue:
+					addblock(queuetile,5)
+				#Colouring the tile that will be visited next is not straigthforward, because already visited tiles might be in the queue.
+				#This might be a problem in dfs alwell so i wont colour them at all for now. Only possibility is in O(n)
+				#addblock(queue_global[0][0],6)
+			
+			if new_visited:
+				addblock(new_visited, 4)
+		print(goal_found)				
+	return algo_started, algo_finished, visited_tiles, visited_matrix
 
 
 
 
+def draw_algo_path(g,visited_tiles):
+	goalpath = []
+	#Tuple of coordinates(x,y)
+	currentnode = g
+	while True:
+		if visited_tiles.get(currentnode) == None:
+			goalpath.append(currentnode)
+			break
+		
+		goalpath.append(currentnode)
+		currentnode = visited_tiles.get(currentnode)
 
-
+	for tile in goalpath:
+		addblock(tile,6)
 
 
 
@@ -722,6 +786,8 @@ def naiveline(point1,point2):
 
 #DRAW FUNTION
 def reset_algo(visited_tiles,stack,visited_matrix_global,algostarted,algopaused,algofinished):
+	global queue_global
+	queue_global = deque()
 	visited_tiles = {}
 	stack = []
 	visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
@@ -771,8 +837,10 @@ def draw():
 		gopausebutton.draw(screen)
 		if algo_started:
 			stopbutton.draw(screen)
-		dfsbutton.draw(screen)
-		bfsbutton.draw(screen)
+		else:
+			skipbutton.draw(screen)
+			dfsbutton.draw(screen)
+			bfsbutton.draw(screen)
 	#pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
 	#pygame.draw.rect(screen, (109,162,255), (1088-4,0,4,1024))
 	
@@ -805,7 +873,7 @@ def draw():
 				pygame.draw.rect(screen, (0,200,0), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
 			
 			elif matrix[x][y] == 6:
-				pygame.draw.rect(screen, (0,200,100), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
+				pygame.draw.rect(screen, (255,216,0), ((2 + tilewidth*x + 4*x),(2 + tilewidth*y + 4*y),tilewidth,tilewidth))
 	#drawing preview line:
 	if middle_mouse_clicked:
 		for coords in linecoords:
@@ -1069,6 +1137,15 @@ while go:
 								
 							elif algohelpbutton.rect.collidepoint(event.pos):	
 								algo_help_popup.activate()
+							elif skipbutton.rect.collidepoint(event.pos):
+								algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
+											False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
+								while not algo_finished:
+									algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
+									algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
+								
+								if goal_found:
+									draw_algo_path(goallocation,visited_tiles_global)
 								
 							elif speedbutton.rect.collidepoint(event.pos):
 								currentspeed = speedbutton.get_state()
@@ -1092,8 +1169,8 @@ while go:
 									#If algo is being started for the first time
 									else:
 										algotimer.set_time(algotimer.get_intervaltime())
-										algo_started, algo_finished, stack_global, visited_tiles_global, visited_matrix_global = dfs_algorun(
-											False,False,0,stack_global,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
+										algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
+											False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
 									
 
 
@@ -1116,6 +1193,12 @@ while go:
 								gopausebutton.set_state(0)
 								gopausebutton.set_image(goimg)			
 
+							elif dfsbutton.rect.collidepoint(event.pos):
+								selected_algorithm = 0
+							
+							elif bfsbutton.rect.collidepoint(event.pos):
+								selected_algorithm = 1
+							
 							"""
 							elif playbutton.rect.collidepoint(event.pos):
 								if startplaced and goalplaced:
@@ -1201,8 +1284,8 @@ while go:
 					intervaltime = algotimer.get_intervaltime()
 					currenttime = algotimer.get_time()
 					if currenttime == 0:
-						algo_started, algo_finished, stack_global, visited_tiles_global, visited_matrix_global = dfs_algorun(
-							algo_started,algo_finished,0,stack_global,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
+						algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
+							algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
 					
 					#If timer > 0 subtract 1
 					if currenttime > 0:
@@ -1213,6 +1296,13 @@ while go:
 						algotimer.set_time(intervaltime)
 
 				else:
+					#If goal has been found:
+					if goal_found:
+						draw_algo_path(goallocation,visited_tiles_global)
+					
+					#If algo finished without finding goal	
+					else:
+						pass
 					algo_started = False
 					gopausebutton.set_state(2)
 					gopausebutton.set_image(resetimg)
