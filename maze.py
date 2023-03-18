@@ -4,7 +4,15 @@ import math
 import pickle
 import copy
 from collections import deque
+import tkinter as tk
+from tkinter import filedialog
+import os
 
+from ctypes import windll
+#0: window gets stretched on 1440p to be same size as 1080p
+#1: window gets set to right 1440p size but doesnt change on 1080p, thus making it blurry there
+#2: window is crisp on both 1440p and 1080p, which makes it relatively small on 1440p
+windll.shcore.SetProcessDpiAwareness(0)
 
 class Button:
 	def __init__(self, image, xpos, ypos):
@@ -167,6 +175,9 @@ class Timer:
 
 
 
+root = tk.Tk()
+root.withdraw()
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
 #General setup
@@ -183,7 +194,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 32
+gridsize = 8
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -259,7 +270,9 @@ algo_help_popup = PopupOneButton(512,128,600,700,crossimg,False,"algo_help","alg
 algo_help_popup.reset()
 start_goal_placed_popup = PopupOneButton(512,128,500,300,crossimg,False,"startgoal_placed","start_goal_placed_popup",okimg)
 start_goal_placed_popup.reset()
-popuplist = [build_help_popup,algo_help_popup,clear_matrix_popup,start_goal_placed_popup]
+matrix_wrong_size_popup = PopupButton(512,128,600,500,crossimg,False,"wrong_size","wrong_size_popup",confirmimg,cancelimg)
+matrix_wrong_size_popup.reset()
+popuplist = [build_help_popup,algo_help_popup,clear_matrix_popup,start_goal_placed_popup,matrix_wrong_size_popup]
 
 
 
@@ -296,6 +309,7 @@ grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidt
 speedtimes = [80,30,5,1]
 algotimer = Timer(speedtimes[1])
 
+loaded_matrix = None
 stack_global = []
 queue_global = deque()
 visited_tiles_global = {}
@@ -306,7 +320,8 @@ all_text = {
 	"clear_grid":"Do you really want to \nclear the grid?\nThis action cannot be undone!",
 	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!",
 	"algo_help":"Hier steht irgendwann mal eine Anleitung zum Algostuff. Bleibt gespannt!!!!!",
-	"startgoal_placed":"You need to place the start tile and the goal tile before you can switch into algo-mode!"
+	"startgoal_placed":"You need to place the start tile and the goal tile before you can switch into algo-mode!",
+	"wrong_size":"The level you loaded doesn't match the size of the grid. Parts of the level might be cropped out. Do you want to continue?"
 }
 
 
@@ -645,16 +660,60 @@ def draw_algo_path(g,visited_tiles):
 
 #TODO Laoding a saved 16x16 grid on a 32x32 grid crashes the game because the matrix is too small. Can be fixed by saving specific sizes
 def save_current_level():
-	pickle_out = open("matrix.pickle","wb")
-	pickle.dump(matrix, pickle_out)
-	pickle_out.close()
+	file_path = None
+	file_path = filedialog.asksaveasfilename(filetypes=[('level',".pickle")],defaultextension=".pickle")
+	if file_path:
+		pickle_out = open(file_path,"wb")
+		pickle.dump(matrix, pickle_out)
+		pickle_out.close()
 
 def load_saved_level():
+	#Old implementation
+	"""
 	pickle_in = open("matrix.pickle", "rb")
 	matrix = pickle.load(pickle_in)
 	pickle_in.close()
 	return matrix
+	"""
+	
+	file_path = None
+	file_path = filedialog.askopenfilename(initialdir=f"{dir_path}\level",
+				filetypes=[("level",".pickle")])
+	if file_path:
+	
+		pickle_in = open(file_path, "rb")
+		matrix = pickle.load(pickle_in)
+		pickle_in.close()
+		return matrix, len(matrix[0])	
+	else:
+		return None, None
+def wrong_size_matrix(new_matrix):
+	global matrix
+	new_size = len(new_matrix[0])
+	#If loaded matrix is smaller than set gridsize
+	if new_size < gridsize:
+		for x in range(new_size):
+			for y in range(new_size):
+				matrix[x][y] = new_matrix[x][y]
+	
+	elif new_size > gridsize:
+		for x in range(gridsize):
+			for y in range(gridsize):
+				matrix[x][y] = new_matrix[x][y]
 
+	find_goal_start()
+	
+def find_goal_start():
+	global startplaced, startlocation, goalplaced, goallocation 			
+	for x in range(gridsize):
+		for y in range(gridsize):
+			if matrix[x][y] == 2:
+				startplaced = True
+				startlocation = (x,y)
+			elif matrix[x][y] == 3:
+				goalplaced = True
+				goallocation = (x,y)
+					
 def removestart():
 	global startplaced, startlocation
 	startplaced = False
@@ -835,10 +894,12 @@ def draw():
 		algohelpbutton.draw(screen)
 		speedbutton.draw(screen)
 		gopausebutton.draw(screen)
+		if not algo_finished:
+			skipbutton.draw(screen)
 		if algo_started:
 			stopbutton.draw(screen)
 		else:
-			skipbutton.draw(screen)
+			
 			dfsbutton.draw(screen)
 			bfsbutton.draw(screen)
 	#pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
@@ -939,7 +1000,14 @@ while go:
 								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
 									popup.deactivate()
 									popup.reset()
-							
+							if selectedpopupid == "wrong_size_popup":
+								if popup.get_confirmbutton().rect.collidepoint(event.pos):
+									wrong_size_matrix(loaded_matrix)
+									popup.deactivate()
+									popup.reset()
+								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
+									popup.deactivate()
+									popup.reset()	
 							if selectedpopupid in okbuttonlist:
 								if popup.get_okbutton().rect.collidepoint(event.pos):
 									popup.deactivate()
@@ -1030,15 +1098,18 @@ while go:
 								save_current_level()
 							elif loadbutton.rect.collidepoint(event.pos):
 								reset_line()
-								matrix = load_saved_level()
-								for x in range(gridsize):
-									for y in range(gridsize):
-										if matrix[x][y] == 2:
-											startplaced = True
-											startlocation = (x,y)
-										elif matrix[x][y] == 3:
-											goalplaced = True
-											goallocation = (x,y)
+								
+								
+								
+								loaded_matrix, matrixsize = load_saved_level()
+								if loaded_matrix:
+									if matrixsize != gridsize:
+										matrix_wrong_size_popup.activate()
+									
+									else:
+										matrix = loaded_matrix
+										find_goal_start()
+								
 							elif wallbutton.rect.collidepoint(event.pos):
 								reset_line()
 								selected_block = 1
@@ -1138,14 +1209,13 @@ while go:
 							elif algohelpbutton.rect.collidepoint(event.pos):	
 								algo_help_popup.activate()
 							elif skipbutton.rect.collidepoint(event.pos):
-								algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
-											False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
+								if not algo_started:
+									algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
+												False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
 								while not algo_finished:
 									algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
 									algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
 								
-								if goal_found:
-									draw_algo_path(goallocation,visited_tiles_global)
 								
 							elif speedbutton.rect.collidepoint(event.pos):
 								currentspeed = speedbutton.get_state()
