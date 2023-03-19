@@ -194,7 +194,7 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-gridsize = 8
+gridsize = 32
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -902,6 +902,7 @@ def draw():
 			
 			dfsbutton.draw(screen)
 			bfsbutton.draw(screen)
+			drawselectionbox(2-selected_algorithm)
 	#pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
 	#pygame.draw.rect(screen, (109,162,255), (1088-4,0,4,1024))
 	
