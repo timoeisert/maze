@@ -228,40 +228,40 @@ linecoords = []
 
 
 #Image Loader
-playmodeimg = pygame.image.load("playmodev2.png")
+playmodeimg = pygame.image.load("graphics/playmodev2.png")
 playmodebutton = Button(playmodeimg,1024, 0)
 
-helpimg = pygame.image.load("help.png")
+helpimg = pygame.image.load("graphics/help.png")
 buildhelpbutton = Button(helpimg, 1024,(1*64))
 algohelpbutton = Button(helpimg,1024,(1*64))
 
-saveimg = pygame.image.load("savev2.png")
+saveimg = pygame.image.load("graphics/savev2.png")
 savebutton = Button(saveimg, 1024, (3*64))
 
-loadimg = pygame.image.load("load.png")
+loadimg = pygame.image.load("graphics/load.png")
 loadbutton = Button(loadimg, 1024, (4*64))
 
-trashimg = pygame.image.load("trash.png")
+trashimg = pygame.image.load("graphics/trash.png")
 trashbutton = Button(trashimg, 1024, (5*64))
 
-wallimg = pygame.transform.scale(pygame.image.load("wall.png"), (64,64))
+wallimg = pygame.transform.scale(pygame.image.load("graphics/wall.png"), (64,64))
 wallbutton = Button(wallimg, 1024, 832)
 
-startimg = pygame.transform.scale(pygame.image.load("start.png"), (64,64))
+startimg = pygame.transform.scale(pygame.image.load("graphics/start.png"), (64,64))
 startbutton = Button(startimg, 1024, 896)
 
-goalimg = pygame.image.load("goal.png")
+goalimg = pygame.image.load("graphics/goal.png")
 grid_goalimg = pygame.transform.scale(goalimg, (int(tilewidth),int(tilewidth)))
 menu_goalimg = pygame.transform.scale(goalimg, (64,64))
 goalbutton = Button(menu_goalimg, 1024, 960)
 
-editmodeimg = pygame.transform.scale(pygame.image.load("editmode.png"), (64,64))
+editmodeimg = pygame.transform.scale(pygame.image.load("graphics/editmode.png"), (64,64))
 editmodebutton = Button(editmodeimg,1024, 0)
 
-crossimg = pygame.transform.scale(pygame.image.load("cross.png"),(32,32))
-confirmimg = pygame.image.load("continue.png")
-cancelimg = pygame.image.load("cancel.png")
-okimg = pygame.image.load("ok.png")
+crossimg = pygame.transform.scale(pygame.image.load("graphics/cross.png"),(32,32))
+confirmimg = pygame.image.load("graphics/continue.png")
+cancelimg = pygame.image.load("graphics/cancel.png")
+okimg = pygame.image.load("graphics/ok.png")
 clear_matrix_popup = PopupButton(512,128,500,300,crossimg,False,"clear_grid","clear_matrix_popup",confirmimg,cancelimg)
 clear_matrix_popup.reset()
 build_help_popup = PopupOneButton(512,128,600,700,crossimg,False,"build_help","build_help_popup",okimg)
@@ -280,31 +280,31 @@ popuplist = [build_help_popup,algo_help_popup,clear_matrix_popup,start_goal_plac
 
 
 
-skipimg = pygame.image.load("skip.png")
+skipimg = pygame.image.load("graphics/skip.png")
 skipbutton = Button(skipimg,1024,(4*64))
-goimg = pygame.image.load("go.png")
-pauseimg = pygame.image.load("pause.png")
-resetimg = pygame.image.load("reset.png")
+goimg = pygame.image.load("graphics/go.png")
+pauseimg = pygame.image.load("graphics/pause.png")
+resetimg = pygame.image.load("graphics/reset.png")
 gopausebutton = StateButton(goimg, 1024,(6*64),0)
 
-stopimg = pygame.image.load("stop.png")
+stopimg = pygame.image.load("graphics/stop.png")
 stopbutton = Button(stopimg,1024,(7*64))
 
 
-speed0img = pygame.image.load("speed0.png")
-speed1img = pygame.image.load("speed1.png")
-speed2img = pygame.image.load("speed2.png")
-speed3img = pygame.image.load("speed3.png")
+speed0img = pygame.image.load("graphics/speed0.png")
+speed1img = pygame.image.load("graphics/speed1.png")
+speed2img = pygame.image.load("graphics/speed2.png")
+speed3img = pygame.image.load("graphics/speed3.png")
 speedimgs = [speed0img,speed1img,speed2img,speed3img]
 speedbutton = StateButton(speed1img,1024,(5*64),1)
 
-dfsimg = pygame.image.load("dfs.png")
+dfsimg = pygame.image.load("graphics/dfs.png")
 dfsbutton = Button(dfsimg, 1024,(14*64))
 
-bfsimg = pygame.image.load("bfs.png")
+bfsimg = pygame.image.load("graphics/bfs.png")
 bfsbutton = Button(bfsimg,1024,(15*64))
 
-linetempimg = pygame.image.load("linetemp.png").convert_alpha()
+linetempimg = pygame.image.load("graphics/linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
 speedtimes = [80,30,5,1]
 algotimer = Timer(speedtimes[1])
