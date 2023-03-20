@@ -14,6 +14,7 @@ from ctypes import windll
 #2: window is crisp on both 1440p and 1080p, which makes it relatively small on 1440p
 windll.shcore.SetProcessDpiAwareness(0)
 
+
 class Button:
 	def __init__(self, image, xpos, ypos):
 		self.image = image
@@ -177,9 +178,14 @@ class Timer:
 
 root = tk.Tk()
 root.withdraw()
-dir_path = os.path.dirname(os.path.realpath(__file__))
+#dir_path = os.path.dirname(os.path.realpath(__file__))
+# determine if application is a script file or frozen exe
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+elif __file__:
+    application_path = os.path.dirname(__file__)
 
-
+print(application_path)
 #General setup
 pygame.init()
 clock = pygame.time.Clock()
@@ -194,6 +200,8 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
+#usergridsize = input("grid size:")
+#gridsize = int(usergridsize)
 gridsize = 32
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
@@ -330,7 +338,7 @@ all_text = {
 
 #Text Renderer
 text_font = pygame.font.SysFont("Arial",24)
-font_big = pygame.font.SysFont("MsSansSerif",46)
+font_big = pygame.font.SysFont("Arial",46)
 text_cache = {}
 
 def get_textmsg(msg, colour):
@@ -422,7 +430,7 @@ def dfs(visited_tiles,s,g,path):
 		return
 	
 	tileneighbors = get_neighbors(s)
-	print(tileneighbors)
+	#print(tileneighbors)
 	for neighbor in tileneighbors:
 		if matrix[neighbor[0]][neighbor[1]] != 1 and neighbor not in visited_tiles:
 			if g not in path:
@@ -633,7 +641,7 @@ def algorun(algo_started, algo_finished, selected_algorithm,visited_tiles,visite
 			
 			if new_visited:
 				addblock(new_visited, 4)
-		print(goal_found)				
+		#print(goal_found)				
 	return algo_started, algo_finished, visited_tiles, visited_matrix
 
 
@@ -677,8 +685,9 @@ def load_saved_level():
 	"""
 	
 	file_path = None
-	file_path = filedialog.askopenfilename(initialdir=f"{dir_path}\level",
+	file_path = filedialog.askopenfilename(initialdir=f"{application_path}\level",
 				filetypes=[("level",".pickle")])
+
 	if file_path:
 	
 		pickle_in = open(file_path, "rb")
@@ -689,6 +698,13 @@ def load_saved_level():
 		return None, None
 def wrong_size_matrix(new_matrix):
 	global matrix
+	
+	for x in range(gridsize):
+		for y in range(gridsize):
+			matrix[x][y] = 0
+	removestart()
+	removegoal()
+			
 	new_size = len(new_matrix[0])
 	#If loaded matrix is smaller than set gridsize
 	if new_size < gridsize:
@@ -1377,8 +1393,8 @@ while go:
 					algo_started = False
 					gopausebutton.set_state(2)
 					gopausebutton.set_image(resetimg)
-					print(stack_global)
-					print(visited_tiles_global)
+					#print(stack_global)
+					#print(visited_tiles_global)
 					stack_global = []
 					visited_tiles_global = []
 					visited_matrix_global = []
