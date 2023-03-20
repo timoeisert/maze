@@ -12,7 +12,7 @@ from ctypes import windll
 #0: window gets stretched on 1440p to be same size as 1080p
 #1: window gets set to right 1440p size but doesnt change on 1080p, thus making it blurry there
 #2: window is crisp on both 1440p and 1080p, which makes it relatively small on 1440p
-windll.shcore.SetProcessDpiAwareness(0)
+windll.shcore.SetProcessDpiAwareness(2)
 
 
 class Button:
@@ -185,7 +185,7 @@ if getattr(sys, 'frozen', False):
 elif __file__:
     application_path = os.path.dirname(__file__)
 
-print(application_path)
+#print(application_path)
 #General setup
 pygame.init()
 clock = pygame.time.Clock()
