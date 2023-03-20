@@ -185,6 +185,10 @@ if getattr(sys, 'frozen', False):
 elif __file__:
     application_path = os.path.dirname(__file__)
 
+usergridsize = input("grid size:")
+gridsize = int(usergridsize)
+
+
 #print(application_path)
 #General setup
 pygame.init()
@@ -202,7 +206,7 @@ bgcolor = (163,163,163)
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
 #usergridsize = input("grid size:")
 #gridsize = int(usergridsize)
-gridsize = 32
+#gridsize = 32
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
