@@ -148,7 +148,31 @@ class PopupButton(Popup):
 		super().draw(screen)
 		self.confirmbutton.draw(screen)
 		self.cancelbutton.draw(screen)
-	
+
+class PopupGridSize(PopupButton):
+	def __init__(self,xpos,ypos,length,height,crossimg,active,displaytext,popid,confirmimg,cancelimg,font_big):
+		PopupButton.__init__(self,xpos,ypos,length,height,crossimg,active,displaytext,popid,confirmimg,cancelimg)	
+		self.input_rect = pygame.Rect(self.rect.centerx - 60,ypos + 300,120,60)
+		self.text_box_color = (100,0,0)
+		self.text_surface = font_big.render(str(user_text),True,(255,255,255))
+		
+
+	def reset(self):
+		PopupButton.reset(self)
+		self.input_rect.x = self.rect.centerx - 60
+		self.input_rect.y = self.rect.y + 300
+	def update(self,xpos,ypos):
+		PopupButton.update(self,xpos,ypos)
+		self.input_rect.x = self.rect.centerx - 60
+		self.input_rect.y = self.rect.y + 300
+
+	def change_text(self, newtext):
+		self.text_surface = font_big.render(str(newtext),True,(255,255,255))
+		
+	def draw(self,screen):
+		PopupButton.draw(self,screen)
+		pygame.draw.rect(screen,self.text_box_color,self.input_rect,2)
+		screen.blit(self.text_surface,self.input_rect)
 
 class Node:
 	def __init__(self,coordinates,parent):
@@ -185,8 +209,6 @@ if getattr(sys, 'frozen', False):
 elif __file__:
     application_path = os.path.dirname(__file__)
 
-usergridsize = input("grid size:")
-gridsize = int(usergridsize)
 
 
 #print(application_path)
@@ -204,9 +226,8 @@ bgcolor = (163,163,163)
 #Height and width of the grid (Needs to be 2^x). Reccomended max:64 Working max:128
 #Any number > 341 crashes the programm because the goalimg is being scaled to fit a tile. When the gridsize is bigger than 256, the tilewidth becomes negative, because its tiles-4
 #The image gets scaled with the int value of tilewidth, so everything up to -0.99 gets rounded up to 0. At 342, the tile width is smaller than -1, so it rounds up to -1 and crashes.
-#usergridsize = input("grid size:")
-#gridsize = int(usergridsize)
-#gridsize = 32
+
+gridsize = 32
 
 matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 #Blockids: 0->nothing, 1-> wall, 2-> start, 3-> goal
@@ -238,6 +259,56 @@ linestartcoords = None
 lineendcoords = None
 linecoords = []
 
+#Grid size change text
+user_text = str(gridsize)
+
+
+#Text Renderer
+text_font = pygame.font.SysFont("Arial",24)
+font_big = pygame.font.SysFont("Arial",46)
+text_cache = {}
+
+def get_textmsg(msg, colour):
+	if not msg in text_cache:
+		text_cache[msg] = text_font.render(msg, True, colour)
+	return text_cache[msg]
+
+def draw_text(img, x, y):
+	screen.blit(img, (x,y))
+
+
+def blit_text(screen, text, popuprect, font, color=pygame.Color('black')):
+    words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
+    space = font.size(' ')[0]  # The width of a space.
+    #plus padding of 10 on both sides
+    x = popuprect[0] + 10
+    y = popuprect[1] + 60
+    #x coordinate + width of popup
+    max_width = popuprect[2] + popuprect[0] - 10
+    #max_height = surface.get_size()
+   
+    for line in words:
+        for word in line:
+            word_surface = font.render(word, 1, color)
+            word_width, word_height = word_surface.get_size()
+            word_height  += 10
+            if x + word_width >= max_width:
+                x = popuprect[0] +10  # Reset the x.
+                y += word_height  # Start on new row.
+            screen.blit(word_surface, (x, y))
+            x += word_width + space
+        x = popuprect[0] +10 # Reset the x.
+        y += word_height  # Start on new row.
+
+text = "This is a really long sentence with a couple of breaks.\nSometimes it will break even if there isn't a break " \
+       "in the sentence, but that's because the text is too long to fit the screen.\nIt can look strange sometimes.\n" \
+       "This function doesn't check if the text is too high to fit on the height of the surface though, so sometimes " \
+       "text will disappear underneath the surface"
+
+
+
+
+
 
 #Image Loader
 playmodeimg = pygame.image.load("graphics/playmodev2.png")
@@ -255,6 +326,9 @@ loadbutton = Button(loadimg, 1024, (4*64))
 
 trashimg = pygame.image.load("graphics/trash.png")
 trashbutton = Button(trashimg, 1024, (5*64))
+
+sizeimg = pygame.image.load("graphics/changesize.png")
+sizebutton = Button(sizeimg, 1024, (6*64))
 
 wallimg = pygame.transform.scale(pygame.image.load("graphics/wall.png"), (64,64))
 wallbutton = Button(wallimg, 1024, 832)
@@ -284,7 +358,10 @@ start_goal_placed_popup = PopupOneButton(512,128,500,300,crossimg,False,"startgo
 start_goal_placed_popup.reset()
 matrix_wrong_size_popup = PopupButton(512,128,600,500,crossimg,False,"wrong_size","wrong_size_popup",confirmimg,cancelimg)
 matrix_wrong_size_popup.reset()
-popuplist = [build_help_popup,algo_help_popup,clear_matrix_popup,start_goal_placed_popup,matrix_wrong_size_popup]
+change_gridsize_popup = PopupGridSize(512,128,600,500,crossimg,False,"change_size","change_size_popup",confirmimg,cancelimg,font_big)
+change_gridsize_popup.reset()
+
+popuplist = [build_help_popup,algo_help_popup,clear_matrix_popup,start_goal_placed_popup,matrix_wrong_size_popup,change_gridsize_popup]
 
 
 
@@ -333,54 +410,14 @@ all_text = {
 	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!",
 	"algo_help":"Hier steht irgendwann mal eine Anleitung zum Algostuff. Bleibt gespannt!!!!!",
 	"startgoal_placed":"You need to place the start tile and the goal tile before you can switch into algo-mode!",
-	"wrong_size":"The level you loaded doesn't match the size of the grid. Parts of the level might be cropped out. Do you want to continue?"
+	"wrong_size":"The level you loaded doesn't match the size of the grid. Parts of the level might be cropped out. Do you want to continue?",
+	"change_size":"Change size placeholder"
 }
 
 
 
 
 
-#Text Renderer
-text_font = pygame.font.SysFont("Arial",24)
-font_big = pygame.font.SysFont("Arial",46)
-text_cache = {}
-
-def get_textmsg(msg, colour):
-	if not msg in text_cache:
-		text_cache[msg] = text_font.render(msg, True, colour)
-	return text_cache[msg]
-
-def draw_text(img, x, y):
-	screen.blit(img, (x,y))
-
-
-def blit_text(screen, text, popuprect, font, color=pygame.Color('black')):
-    words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
-    space = font.size(' ')[0]  # The width of a space.
-    #plus padding of 10 on both sides
-    x = popuprect[0] + 10
-    y = popuprect[1] + 60
-    #x coordinate + width of popup
-    max_width = popuprect[2] + popuprect[0] - 10
-    #max_height = surface.get_size()
-   
-    for line in words:
-        for word in line:
-            word_surface = font.render(word, 1, color)
-            word_width, word_height = word_surface.get_size()
-            word_height  += 10
-            if x + word_width >= max_width:
-                x = popuprect[0] +10  # Reset the x.
-                y += word_height  # Start on new row.
-            screen.blit(word_surface, (x, y))
-            x += word_width + space
-        x = popuprect[0] +10 # Reset the x.
-        y += word_height  # Start on new row.
-
-text = "This is a really long sentence with a couple of breaks.\nSometimes it will break even if there isn't a break " \
-       "in the sentence, but that's because the text is too long to fit the screen.\nIt can look strange sometimes.\n" \
-       "This function doesn't check if the text is too high to fit on the height of the surface though, so sometimes " \
-       "text will disappear underneath the surface"
 
 
 def get_neighbors(s):
@@ -722,7 +759,39 @@ def wrong_size_matrix(new_matrix):
 				matrix[x][y] = new_matrix[x][y]
 
 	find_goal_start()
+
+def change_matrix_size(oldgridsize):
+	global matrix
 	
+	oldmatrix = copy.deepcopy(matrix)
+	matrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
+	
+	removestart()
+	removegoal()
+			
+
+	if gridsize < oldgridsize:
+		for x in range(gridsize):
+			for y in range(gridsize):
+				matrix[x][y] = oldmatrix[x][y]
+	
+	elif gridsize > oldgridsize:
+		for x in range(oldgridsize):
+			for y in range(oldgridsize):
+				matrix[x][y] = oldmatrix[x][y]
+	
+	find_goal_start()
+
+def update_gridstuff():
+	global tiles, tilewidth, gridsize, grid_goalimg, goalimg, visited_matrix_global, grid_linetemp, linetempimg
+		#width and height of a single tile, including the 2px border on each side
+	tiles = 1024 / gridsize
+	#width and height of a single tile, minus the 2px border on each side. 2 sides, so 2px + 2px = 4px
+	tilewidth = tiles - 4
+	visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
+	grid_goalimg = pygame.transform.scale(goalimg, (int(tilewidth),int(tilewidth)))
+	grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
+
 def find_goal_start():
 	global startplaced, startlocation, goalplaced, goallocation 			
 	for x in range(gridsize):
@@ -905,6 +974,7 @@ def draw():
 		startbutton.draw(screen)
 		wallbutton.draw(screen)
 		trashbutton.draw(screen)
+		sizebutton.draw(screen)
 		#
 		drawselectionbox(4-selected_block)
 		
@@ -1029,6 +1099,21 @@ while go:
 								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
 									popup.deactivate()
 									popup.reset()	
+									
+							if selectedpopupid == "change_size_popup":
+								if popup.get_confirmbutton().rect.collidepoint(event.pos):
+									#old gridsize:
+									oldgridsize = gridsize
+									gridsize = int(user_text)
+									change_matrix_size(oldgridsize)
+									update_gridstuff()
+									popup.deactivate()
+									popup.reset()
+								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
+									user_text = str(gridsize)
+									popup.deactivate()
+									popup.reset()		
+									
 							if selectedpopupid in okbuttonlist:
 								if popup.get_okbutton().rect.collidepoint(event.pos):
 									popup.deactivate()
@@ -1060,7 +1145,16 @@ while go:
 			if event.type == pygame.MOUSEMOTION and moving:
 				
 				currently_selected_popup.update(event.rel[0],event.rel[1])
-					
+			
+			if event.type == pygame.KEYDOWN and change_gridsize_popup.get_active():
+				if event.key == pygame.K_BACKSPACE:
+					user_text = user_text[:-1]
+				else:
+					if len(user_text) < 3 and event.unicode.isnumeric():
+	
+						user_text += event.unicode
+						
+				change_gridsize_popup.change_text(user_text)	
 	else:					
 		#Build mode
 
@@ -1143,7 +1237,10 @@ while go:
 							elif trashbutton.rect.collidepoint(event.pos):#
 								reset_line()
 								clear_matrix_popup.activate()
-								
+
+							elif sizebutton.rect.collidepoint(event.pos):
+								reset_line()
+								change_gridsize_popup.activate()
 							
 				
 					
@@ -1405,5 +1502,6 @@ while go:
 				
 								
 	draw()	
+	
 	pygame.display.update()
 	clock.tick(120)
