@@ -174,6 +174,11 @@ class PopupGridSize(PopupButton):
 		pygame.draw.rect(screen,self.text_box_color,self.input_rect,2)
 		screen.blit(self.text_surface,self.input_rect)
 
+	def deactivate(self):
+		global user_text
+		super().deactivate()
+		self.change_text(user_text)	
+		
 class Node:
 	def __init__(self,coordinates,parent):
 		self.coordinates = coordinates
@@ -1102,17 +1107,31 @@ while go:
 									
 							if selectedpopupid == "change_size_popup":
 								if popup.get_confirmbutton().rect.collidepoint(event.pos):
-									#old gridsize:
-									oldgridsize = gridsize
-									gridsize = int(user_text)
-									change_matrix_size(oldgridsize)
-									update_gridstuff()
-									popup.deactivate()
-									popup.reset()
+									#if new gridsize is valid:
+									#Not empty
+									if user_text:
+										#Working number
+										if int(user_text) > 0 and int(user_text) <= 300:
+											#old gridsize:
+											oldgridsize = gridsize
+											gridsize = int(user_text)
+											change_matrix_size(oldgridsize)
+											update_gridstuff()
+											popup.deactivate()
+											popup.reset()
+
+									#else:
+
+									
 								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
 									user_text = str(gridsize)
 									popup.deactivate()
 									popup.reset()		
+								
+								elif popup.get_quitbutton().rect.collidepoint(event.pos):
+									user_text = str(gridsize)
+									popup.deactivate()
+									popup.reset()
 									
 							if selectedpopupid in okbuttonlist:
 								if popup.get_okbutton().rect.collidepoint(event.pos):
