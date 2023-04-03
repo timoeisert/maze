@@ -155,9 +155,9 @@ class PopupGridSize(PopupButton):
 		self.input_rect = pygame.Rect(self.rect.centerx - 60,ypos + 300,120,60)
 		self.text_box_color = (100,0,0)
 		self.text_surface = font_big.render(str(user_text),True,(255,255,255))
-		
+		self.text_box_active = False
 
-	def reset(self):
+	def reset(self): 
 		PopupButton.reset(self)
 		self.input_rect.x = self.rect.centerx - 60
 		self.input_rect.y = self.rect.y + 300
@@ -174,6 +174,18 @@ class PopupGridSize(PopupButton):
 		pygame.draw.rect(screen,self.text_box_color,self.input_rect,2)
 		screen.blit(self.text_surface,self.input_rect)
 
+	def set_textboxcolor(self,color):
+		self.text_box_color = color
+
+	def get_text_box_active(self):
+		return self.text_box_active
+	
+	def set_text_box_active(self,state):
+		self.text_box_active = state
+		
+	def get_input_rect(self):
+		return self.input_rect
+	
 	def deactivate(self):
 		global user_text
 		super().deactivate()
@@ -780,7 +792,7 @@ def change_matrix_size(oldgridsize):
 			for y in range(gridsize):
 				matrix[x][y] = oldmatrix[x][y]
 	
-	elif gridsize > oldgridsize:
+	elif gridsize > oldgridsize:wrong_size_matrix
 		for x in range(oldgridsize):
 			for y in range(oldgridsize):
 				matrix[x][y] = oldmatrix[x][y]
@@ -1121,8 +1133,7 @@ while go:
 											popup.reset()
 
 									#else:
-
-									
+								
 								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
 									user_text = str(gridsize)
 									popup.deactivate()
@@ -1132,6 +1143,13 @@ while go:
 									user_text = str(gridsize)
 									popup.deactivate()
 									popup.reset()
+									
+								if popup.get_input_rect().collidepoint(event.pos):
+									popup.set_text_box_active(True)
+									popup.set_textboxcolor((255,0,0))
+								else:
+									popup.set_text_box_active(False)
+									popup.set_textboxcolor((0,255,0))
 									
 							if selectedpopupid in okbuttonlist:
 								if popup.get_okbutton().rect.collidepoint(event.pos):
@@ -1166,14 +1184,15 @@ while go:
 				currently_selected_popup.update(event.rel[0],event.rel[1])
 			
 			if event.type == pygame.KEYDOWN and change_gridsize_popup.get_active():
-				if event.key == pygame.K_BACKSPACE:
-					user_text = user_text[:-1]
-				else:
-					if len(user_text) < 3 and event.unicode.isnumeric():
-	
-						user_text += event.unicode
-						
-				change_gridsize_popup.change_text(user_text)	
+				if change_gridsize_popup.get_text_box_active():
+					if event.key == pygame.K_BACKSPACE:
+						user_text = user_text[:-1]
+					else:
+						if len(user_text) < 3 and event.unicode.isnumeric():
+		
+							user_text += event.unicode
+							
+					change_gridsize_popup.change_text(user_text)	
 	else:					
 		#Build mode
 
