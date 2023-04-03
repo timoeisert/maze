@@ -190,7 +190,12 @@ class PopupGridSize(PopupButton):
 		global user_text
 		super().deactivate()
 		self.change_text(user_text)	
+	def activate(self):
+		global user_text
+		super().activate()
 		
+		self.change_text(user_text)	
+
 class Node:
 	def __init__(self,coordinates,parent):
 		self.coordinates = coordinates
@@ -755,25 +760,13 @@ def load_saved_level():
 	else:
 		return None, None
 def wrong_size_matrix(new_matrix):
-	global matrix
+	global matrix, gridsize
 	
-	for x in range(gridsize):
-		for y in range(gridsize):
-			matrix[x][y] = 0
 	removestart()
 	removegoal()
-			
-	new_size = len(new_matrix[0])
+	gridsize = len(new_matrix[0])
+	matrix = copy.deepcopy(new_matrix)
 	#If loaded matrix is smaller than set gridsize
-	if new_size < gridsize:
-		for x in range(new_size):
-			for y in range(new_size):
-				matrix[x][y] = new_matrix[x][y]
-	
-	elif new_size > gridsize:
-		for x in range(gridsize):
-			for y in range(gridsize):
-				matrix[x][y] = new_matrix[x][y]
 
 	find_goal_start()
 
@@ -792,7 +785,7 @@ def change_matrix_size(oldgridsize):
 			for y in range(gridsize):
 				matrix[x][y] = oldmatrix[x][y]
 	
-	elif gridsize > oldgridsize:wrong_size_matrix
+	elif gridsize > oldgridsize:
 		for x in range(oldgridsize):
 			for y in range(oldgridsize):
 				matrix[x][y] = oldmatrix[x][y]
@@ -800,7 +793,7 @@ def change_matrix_size(oldgridsize):
 	find_goal_start()
 
 def update_gridstuff():
-	global tiles, tilewidth, gridsize, grid_goalimg, goalimg, visited_matrix_global, grid_linetemp, linetempimg
+	global tiles, tilewidth, gridsize, grid_goalimg, goalimg, visited_matrix_global, grid_linetemp, linetempimg,user_text
 		#width and height of a single tile, including the 2px border on each side
 	tiles = 1024 / gridsize
 	#width and height of a single tile, minus the 2px border on each side. 2 sides, so 2px + 2px = 4px
@@ -808,7 +801,7 @@ def update_gridstuff():
 	visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
 	grid_goalimg = pygame.transform.scale(goalimg, (int(tilewidth),int(tilewidth)))
 	grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
-
+	user_text = str(gridsize)
 def find_goal_start():
 	global startplaced, startlocation, goalplaced, goallocation 			
 	for x in range(gridsize):
@@ -1111,6 +1104,7 @@ while go:
 							if selectedpopupid == "wrong_size_popup":
 								if popup.get_confirmbutton().rect.collidepoint(event.pos):
 									wrong_size_matrix(loaded_matrix)
+									update_gridstuff()
 									popup.deactivate()
 									popup.reset()
 								elif popup.get_cancelbutton().rect.collidepoint(event.pos):
