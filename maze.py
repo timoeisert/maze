@@ -1422,13 +1422,13 @@ while go:
 								gopausebutton.set_state(0)
 								gopausebutton.set_image(goimg)			
 
-							elif dfsbutton.rect.collidepoint(event.pos):
+							elif dfsbutton.rect.collidepoint(event.pos) and not algo_started:
 								selected_algorithm = 0
 							
-							elif bfsbutton.rect.collidepoint(event.pos):
+							elif bfsbutton.rect.collidepoint(event.pos) and not algo_started:
 								selected_algorithm = 1
 
-							elif dijkstrabutton.rect.collidepoint(event.pos):
+							elif dijkstrabutton.rect.collidepoint(event.pos) and not algo_started:
 								selected_algorithm = 2
 
 							"""
