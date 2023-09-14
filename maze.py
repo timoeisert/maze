@@ -273,7 +273,7 @@ startlocation = [-1,-1]
 goalplaced = False
 goallocation = [-1,-1]
 
-foundpath = []
+goalpath = []
 backupmatrix = [[0 for x in range(gridsize)] for y in range(gridsize)] 
 
 #Line drawing variables
@@ -400,7 +400,8 @@ gopausebutton = StateButton(goimg, 1024,(6*64),0)
 
 stopimg = pygame.image.load("graphics/stop.png")
 stopbutton = Button(stopimg,1024,(7*64))
-
+goalpathlineimg = pygame.image.load("graphics/goalpathline.png")
+goalpathlinebutton  = Button(goalpathlineimg,1024,(9*64))
 
 speed0img = pygame.image.load("graphics/speed0.png")
 speed1img = pygame.image.load("graphics/speed1.png")
@@ -714,6 +715,7 @@ def algorun(algo_started, algo_finished, selected_algorithm,visited_tiles,visite
 
 
 def draw_algo_path(g,visited_tiles):
+	global goalpath
 	goalpath = []
 	#Tuple of coordinates(x,y)
 	currentnode = g
@@ -1363,7 +1365,8 @@ while go:
 								
 							elif algohelpbutton.rect.collidepoint(event.pos):	
 								algo_help_popup.activate()
-							elif skipbutton.rect.collidepoint(event.pos):
+								
+							elif skipbutton.rect.collidepoint(event.pos) and not algo_finished:
 								if not algo_started:
 									algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
 												False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
@@ -1411,7 +1414,8 @@ while go:
 									gopausebutton.set_state(0)
 									gopausebutton.set_image(goimg)
 									
-							elif stopbutton.rect.collidepoint(event.pos):
+							elif stopbutton.rect.collidepoint(event.pos) and algo_started:
+							
 								visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished = reset_algo(
 									visited_tiles_global,stack_global,visited_matrix_global,algo_started,algo_paused,algo_finished)
 								matrix = copy.deepcopy(backupmatrix)
