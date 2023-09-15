@@ -33,6 +33,7 @@ class StateButton(Button):
 		super().__init__(image, xpos, ypos)
 		#Pauseplaybutton states: 0 -> play, 1 -> pause, 2 -> replay
 		#Speedbutton states:1
+		#Pathlinebutton states: 0 -> no line, 1 -> line
 		self.state = state
 	def set_image(self, image):
 		self.image = image	
@@ -400,8 +401,10 @@ gopausebutton = StateButton(goimg, 1024,(6*64),0)
 
 stopimg = pygame.image.load("graphics/stop.png")
 stopbutton = Button(stopimg,1024,(7*64))
-goalpathlineimg = pygame.image.load("graphics/goalpathline.png")
-goalpathlinebutton  = Button(goalpathlineimg,1024,(9*64))
+
+goalpathlineonimg = pygame.image.load("graphics/goalpathlineon.png")
+goalpathlineoffimg = pygame.image.load("graphics/goalpathlineoff.png")
+goalpathlinebutton  = StateButton(goalpathlineonimg,1024,(7*64),1)
 
 speed0img = pygame.image.load("graphics/speed0.png")
 speed1img = pygame.image.load("graphics/speed1.png")
@@ -430,6 +433,7 @@ queue_global = deque()
 visited_tiles_global = {}
 goal_found = False
 visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
+drawgoalpathline = True
 
 all_text = {
 	"clear_grid":"Do you really want to \nclear the grid?\nThis action cannot be undone!",
@@ -949,7 +953,8 @@ def naiveline(point1,point2):
 
 #DRAW FUNTION
 def reset_algo(visited_tiles,stack,visited_matrix_global,algostarted,algopaused,algofinished):
-	global queue_global
+	global queue_global, goal_found
+	goal_found = False
 	queue_global = deque()
 	visited_tiles = {}
 	stack = []
@@ -1004,7 +1009,10 @@ def draw():
 		if algo_started:
 			stopbutton.draw(screen)
 		else:
-			
+
+			if goal_found:
+				goalpathlinebutton.draw(screen)			
+
 			dfsbutton.draw(screen)
 			bfsbutton.draw(screen)
 			dijkstrabutton.draw(screen)
@@ -1053,6 +1061,8 @@ def draw():
 	#textimg = get_textmsg("This is the help bar\nSo is this",(100,0,0))
 	#print(textimg.get_rect())
 	#draw_text(textimg,500,500)	
+	if goal_found and drawgoalpathline:
+		print("hallo")
 	
 	for popup in popuplist:
 		if popup.get_active():
@@ -1421,6 +1431,18 @@ while go:
 								matrix = copy.deepcopy(backupmatrix)
 								gopausebutton.set_state(0)
 								gopausebutton.set_image(goimg)			
+
+							elif goalpathlinebutton.rect.collidepoint(event.pos) and not algo_started and goal_found:
+								if goalpathlinebutton.get_state() == 0:
+									goalpathlinebutton.set_state(1)
+									goalpathlinebutton.set_image(goalpathlineonimg)
+									drawgoalpathline = True
+								
+								elif goalpathlinebutton.get_state() == 1:
+									goalpathlinebutton.set_state(0)
+									goalpathlinebutton.set_image(goalpathlineoffimg)
+									drawgoalpathline = False
+							
 
 							elif dfsbutton.rect.collidepoint(event.pos) and not algo_started:
 								selected_algorithm = 0
