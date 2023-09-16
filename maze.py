@@ -1062,7 +1062,12 @@ def draw():
 	#print(textimg.get_rect())
 	#draw_text(textimg,500,500)	
 	if goal_found and drawgoalpathline:
-		print("hallo")
+		for i in range(len(goalpath)-1):
+			starttile = goalpath[i]
+			endtile = goalpath[i+1]
+			spos = [int(starttile[0]*tiles + (tiles / 2)), int(starttile[1] * tiles + (tiles / 2))]
+			epos = [int(endtile[0]*tiles + (tiles / 2)), int(endtile[1] * tiles + (tiles / 2))]
+			pygame.draw.line(screen,(0,0,0),spos,epos,4)
 	
 	for popup in popuplist:
 		if popup.get_active():
