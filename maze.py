@@ -7,6 +7,7 @@ from collections import deque
 import tkinter as tk
 from tkinter import filedialog
 import os
+import heapq
 
 from ctypes import windll
 #0: window gets stretched on 1440p to be same size as 1080p
@@ -435,6 +436,12 @@ goal_found = False
 visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
 drawgoalpathline = True
 
+#Dijkstra/A*
+#[Cost (Uses one million instead of inf just because),Distance from goal (Heuristic, hast to be calculated)]
+dijkastarmatrix = [[[1000000,0] for x in range(gridsize)] for y in range(gridsize)] 
+dijkastarheap = []
+heapq.heapify(dijkastarheap)
+
 all_text = {
 	"clear_grid":"Do you really want to \nclear the grid?\nThis action cannot be undone!",
 	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!",
@@ -618,6 +625,7 @@ def dfs_step(stack,visited_tiles,visited_matrix,g):
 		while True:
 			if stack:
 				v = stack.pop(-1)
+	
 				if not (visited_matrix[v[0][0]][v[0][1]]):
 					break
 			else:
@@ -675,7 +683,52 @@ def bfs_step(queue,visited_tiles,visited_matrix,g):
 	else:
 		return queue, visited_tiles, visited_matrix, True, False, None, []
 
-def algorun(algo_started, algo_finished, selected_algorithm,visited_tiles,visited_matrix,startlocation,goallocation):
+def dijkstra_step(g):
+	#return algofinished, new_queue, new_visited, goalfound
+	global dijkastarheap, dijkastarmatrix, visited_matrix_global, visited_tiles_global
+	if dijkastarheap:
+		new_on_queue = []
+		#A tile is added to queue. Later, a better path to tile is found. The first path doesn't get removed,
+		#so the tile is in queue twice now. The better path gets popped first, so the second one can be dropped.
+		while True:
+			if dijkastarheap:
+				smallestentry = heapq.heappop(dijkastarheap)
+		
+				currentcost , v = smallestentry
+		
+				#If this node has already been updated
+				if not visited_matrix_global[v[0]][v[1]]:
+					break
+			else:
+				return False, [], None, False
+		visited_matrix_global[v[0]][v[1]] = True
+		#If current node is end node
+		if v == g:
+			return True, [], None, True
+		tileneighbors = get_neighbors(v)
+		
+		for neighbor in tileneighbors:
+			if matrix[neighbor[0]][neighbor[1]] != 1:
+				if not visited_matrix_global[neighbor[0]][neighbor[1]]:
+					newcost = currentcost + 1
+					if newcost < dijkastarmatrix[neighbor[0]][neighbor[1]][0]:
+						dijkastarmatrix[neighbor[0]][neighbor[1]][0] = newcost
+						heapq.heappush(dijkastarheap, (newcost,neighbor))
+						new_on_queue.append(neighbor)
+						#parent of new found tile is v
+						visited_tiles_global[neighbor] = v
+		
+		
+		return False, new_on_queue, v, False
+				
+	else:
+		return True, [], None, False
+		
+
+		
+
+#bfs and dfs
+def algorunfs(algo_started, algo_finished, selected_algorithm,visited_tiles,visited_matrix,startlocation,goallocation):
 	global queue_global, stack_global, goal_found
 	if selected_algorithm == 0:
 		
@@ -715,8 +768,27 @@ def algorun(algo_started, algo_finished, selected_algorithm,visited_tiles,visite
 		#print(goal_found)				
 	return algo_started, algo_finished, visited_tiles, visited_matrix
 
+#dijkstra and a*
+def algorunda(algo_started, algo_finished, goallocation):
+	
+	global dijkastarheap, goal_found
+	if selected_algorithm == 2:
+		if not algo_finished:
+			if algo_started == False:
+				heapq.heappush(dijkastarheap,(0,startlocation))
+				algo_started = True
+			algo_finished, new_queue, new_visited, goal_found = dijkstra_step(goallocation)
+			if new_queue:
+				for stacktile in new_queue:
+					addblock(stacktile,5)
 
+			if new_visited:
+				addblock(new_visited, 4)
+						
+	elif selected_algorithm == 3:
+		pass
 
+	return algo_started, algo_finished
 
 def draw_algo_path(g,visited_tiles):
 	global goalpath
@@ -802,12 +874,13 @@ def change_matrix_size(oldgridsize):
 	find_goal_start()
 
 def update_gridstuff():
-	global tiles, tilewidth, gridsize, grid_goalimg, goalimg, visited_matrix_global, grid_linetemp, linetempimg,user_text
+	global tiles, tilewidth, gridsize, grid_goalimg, goalimg, visited_matrix_global, dijkastarmatrix, grid_linetemp, linetempimg,user_text
 		#width and height of a single tile, including the 2px border on each side
 	tiles = 1024 / gridsize
 	#width and height of a single tile, minus the 2px border on each side. 2 sides, so 2px + 2px = 4px
 	tilewidth = tiles - 4
 	visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
+	dijkastarmatrix = [[[1000000,0] for x in range(gridsize)] for y in range(gridsize)] 
 	grid_goalimg = pygame.transform.scale(goalimg, (int(tilewidth),int(tilewidth)))
 	grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
 	user_text = str(gridsize)
@@ -953,12 +1026,25 @@ def naiveline(point1,point2):
 
 #DRAW FUNTION
 def reset_algo(visited_tiles,stack,visited_matrix_global,algostarted,algopaused,algofinished):
-	global queue_global, goal_found
+	global queue_global, goal_found, dijkastarmatrix, dijkastarheap
 	goal_found = False
 	queue_global = deque()
 	visited_tiles = {}
 	stack = []
 	visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
+	dijkastarmatrix = [[[1000000,0] for x in range(gridsize)] for y in range(gridsize)] 
+	dijkastarmatrix[startlocation[0]][startlocation[1]][0] = 0
+	#This shouldn't be needed since the heuristic is never changed
+	"""							
+	for i in range(gridsize):
+		for j in range(gridsize):
+			x1, y1 = goallocation
+			x2, y2 = i, j
+			distance = math.sqrt((x2-x1)**2 + (y2-y1)**2 )
+			dijkastarmatrix[i][j][1] = distance
+			
+	"""
+	dijkastarheap = []
 	algostarted = False
 	algopaused = False
 	algofinished = False
@@ -1253,8 +1339,20 @@ while go:
 							if playmodebutton.rect.collidepoint(event.pos):
 								reset_line()
 								if goalplaced and startplaced:
+									
 									backupmatrix = copy.deepcopy(matrix)
 									gamemode = 1
+									#initialize dijkstra and a* matrix:
+									
+									dijkastarmatrix[startlocation[0]][startlocation[1]][0] = 0
+									
+									for i in range(gridsize):
+										for j in range(gridsize):
+											x1, y1 = goallocation
+											x2, y2 = i, j
+											distance = math.sqrt((x2-x1)**2 + (y2-y1)**2 )
+											dijkastarmatrix[i][j][1] = distance
+									
 								else:
 									start_goal_placed_popup.activate()
 
@@ -1383,12 +1481,17 @@ while go:
 								
 							elif skipbutton.rect.collidepoint(event.pos) and not algo_finished:
 								if not algo_started:
-									algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
+									if selected_algorithm == 0 or selected_algorithm == 1:
+										algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorunfs(
 												False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
+									elif selected_algorithm == 2 or selected_algorithm == 3:
+										algo_started, algo_finished = algorunda(False, False, goallocation)
 								while not algo_finished:
-									algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
-									algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
-								
+									if selected_algorithm == 0 or selected_algorithm == 1:
+										algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorunfs(
+										algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
+									elif selected_algorithm == 2 or selected_algorithm == 3:
+										algo_started, algo_finished = algorunda(algo_started, algo_finished, goallocation)
 								
 							elif speedbutton.rect.collidepoint(event.pos):
 								currentspeed = speedbutton.get_state()
@@ -1412,9 +1515,11 @@ while go:
 									#If algo is being started for the first time
 									else:
 										algotimer.set_time(algotimer.get_intervaltime())
-										algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
-											False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
-									
+										if selected_algorithm == 0 or selected_algorithm == 1:
+											algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorunfs(
+												False,False,selected_algorithm,visited_tiles_global,visited_matrix_global,startlocation,goallocation)
+										elif selected_algorithm == 2 or selected_algorithm == 3:
+											algo_started, algo_finished = algorunda(False, False, goallocation)
 
 
 								elif gopausebutton.get_state() == 1:
@@ -1543,9 +1648,13 @@ while go:
 					intervaltime = algotimer.get_intervaltime()
 					currenttime = algotimer.get_time()
 					if currenttime == 0:
-						algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorun(
-							algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
-					
+						
+						if selected_algorithm == 0 or selected_algorithm == 1:
+							algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorunfs(
+								algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
+						elif selected_algorithm == 2 or selected_algorithm == 3:
+							algo_started, algo_finished = algorunda(algo_started, algo_finished, goallocation)
+							
 					#If timer > 0 subtract 1
 					if currenttime > 0:
 						algotimer.set_time(currenttime-1)
