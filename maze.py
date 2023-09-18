@@ -855,6 +855,7 @@ def draw_algo_path(g,visited_tiles):
 	#Tuple of coordinates(x,y)
 	currentnode = g
 	while True:
+		
 		if visited_tiles.get(currentnode) == None:
 			goalpath.append(currentnode)
 			break
@@ -863,6 +864,7 @@ def draw_algo_path(g,visited_tiles):
 		currentnode = visited_tiles.get(currentnode)
 
 	for tile in goalpath:
+		
 		addblock(tile,6)
 
 
@@ -1085,7 +1087,7 @@ def naiveline(point1,point2):
 
 #DRAW FUNTION
 def reset_algo(visited_tiles,stack,visited_matrix_global,algostarted,algopaused,algofinished):
-	global queue_global, goal_found, dijkastarmatrix, dijkastarheap
+	global queue_global, goal_found, dijkastarmatrix, dijkastarheap,goalpath
 	goal_found = False
 	queue_global = deque()
 	visited_tiles = {}
@@ -1105,6 +1107,7 @@ def reset_algo(visited_tiles,stack,visited_matrix_global,algostarted,algopaused,
 	algostarted = False
 	algopaused = False
 	algofinished = False
+	goalpath = []
 	algotimer.set_time(algotimer.get_intervaltime())
 	return visited_tiles,stack,visited_matrix_global,algostarted,algopaused,algofinished
 
@@ -1544,6 +1547,8 @@ while go:
 									elif selected_algorithm == 2 or selected_algorithm == 3:
 										algo_started, algo_finished = algorunda(False, False, goallocation)
 								while not algo_finished:
+									if algo_paused:
+										algo_paused = False
 									if selected_algorithm == 0 or selected_algorithm == 1:
 										algo_started, algo_finished, visited_tiles_global, visited_matrix_global = algorunfs(
 										algo_started,algo_finished,selected_algorithm,visited_tiles_global, visited_matrix_global, startlocation,goallocation)	
@@ -1721,6 +1726,7 @@ while go:
 						algotimer.set_time(intervaltime)
 
 				else:
+					#print(goal_found)
 					#If goal has been found:
 					if goal_found:
 						draw_algo_path(goallocation,visited_tiles_global)
