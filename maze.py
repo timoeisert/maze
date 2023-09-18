@@ -724,7 +724,55 @@ def dijkstra_step(g):
 	else:
 		return True, [], None, False
 		
+def astar_step(g):
+	#return algofinished, new_queue, new_visited, goalfound
+	global dijkastarheap, dijkastarmatrix, visited_matrix_global, visited_tiles_global
+	if dijkastarheap:
+		new_on_queue = []
+		#A tile is added to queue. Later, a better path to tile is found. The first path doesn't get removed,
+		#so the tile is in queue twice now. The better path gets popped first, so the second one can be dropped.
+		while True:
+			if dijkastarheap:
+				smallestentry = heapq.heappop(dijkastarheap)
+				#currentnode
+				v = smallestentry[1]
+				#current path cost to node
+				currentcost = dijkastarmatrix[v[0]][v[1]][0]
+		
+				#If this node has already been updated
+				if not visited_matrix_global[v[0]][v[1]]:
+					break
+			else:
+				return False, [], None, False
+		visited_matrix_global[v[0]][v[1]] = True
+		#If current node is end node
+		if v == g:
+			return True, [], None, True
+		tileneighbors = get_neighbors(v)
+		
+		for neighbor in tileneighbors:
+			if matrix[neighbor[0]][neighbor[1]] != 1:
+				if not visited_matrix_global[neighbor[0]][neighbor[1]]:
+					#Pathcost of new neighbors = path to parent + 1
+					newpathcost = currentcost + 1
+					heuristiccost = dijkastarmatrix[neighbor[0]][neighbor[1]][1]
+					#Heuristic is static so you dont have to add it to the path cost for comparison
+					if newpathcost < dijkastarmatrix[neighbor[0]][neighbor[1]][0]:
+						dijkastarmatrix[neighbor[0]][neighbor[1]][0] = newpathcost
+						#For heap we add path cost to heuristic
+						heapq.heappush(dijkastarheap, (newpathcost + heuristiccost,neighbor))
+						new_on_queue.append(neighbor)
+						#parent of new found tile is v
+						visited_tiles_global[neighbor] = v
+		
+		
+		return False, new_on_queue, v, False
+				
+	else:
+		return True, [], None, False
+		
 
+		
 		
 
 #bfs and dfs
@@ -786,7 +834,18 @@ def algorunda(algo_started, algo_finished, goallocation):
 				addblock(new_visited, 4)
 						
 	elif selected_algorithm == 3:
-		pass
+		if not algo_finished:
+			if algo_started == False:
+				#Start vertex weights always zero, zero heuristic
+				heapq.heappush(dijkastarheap,(0,startlocation))
+				algo_started = True
+			algo_finished, new_queue, new_visited, goal_found = astar_step(goallocation)
+			if new_queue:
+				for stacktile in new_queue:
+					addblock(stacktile,5)
+
+			if new_visited:
+				addblock(new_visited, 4)
 
 	return algo_started, algo_finished
 
@@ -1034,16 +1093,14 @@ def reset_algo(visited_tiles,stack,visited_matrix_global,algostarted,algopaused,
 	visited_matrix_global = [[False for x in range(gridsize)] for y in range(gridsize)] 
 	dijkastarmatrix = [[[1000000,0] for x in range(gridsize)] for y in range(gridsize)] 
 	dijkastarmatrix[startlocation[0]][startlocation[1]][0] = 0
-	#This shouldn't be needed since the heuristic is never changed
-	"""							
+						
 	for i in range(gridsize):
 		for j in range(gridsize):
 			x1, y1 = goallocation
 			x2, y2 = i, j
 			distance = math.sqrt((x2-x1)**2 + (y2-y1)**2 )
 			dijkastarmatrix[i][j][1] = distance
-			
-	"""
+	
 	dijkastarheap = []
 	algostarted = False
 	algopaused = False
@@ -1561,7 +1618,7 @@ while go:
 								selected_algorithm = 1
 
 							elif dijkstrabutton.rect.collidepoint(event.pos) and not algo_started:
-								selected_algorithm = 2
+								selected_algorithm = 3
 
 							"""
 							elif playbutton.rect.collidepoint(event.pos):
