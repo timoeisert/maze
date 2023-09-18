@@ -423,6 +423,9 @@ bfsbutton = Button(bfsimg,1024,(13*64))
 dijkstraimg = pygame.image.load("graphics/dijkstra.png")
 dijkstrabutton = Button(dijkstraimg,1024,(14*64))
 
+astarimg = pygame.image.load("graphics/astar.png")
+astarbutton = Button(astarimg,1024,(15*64))
+
 linetempimg = pygame.image.load("graphics/linetemp.png").convert_alpha()
 grid_linetemp = pygame.transform.scale(linetempimg, (int(tilewidth),int(tilewidth)))
 speedtimes = [80,30,5,1]
@@ -1162,7 +1165,7 @@ def draw():
 			dfsbutton.draw(screen)
 			bfsbutton.draw(screen)
 			dijkstrabutton.draw(screen)
-			
+			astarbutton.draw(screen)
 			drawselectionbox(4-selected_algorithm)
 	#pygame.draw.rect(screen, (109,162,255), (1024,0,4,1024))
 	#pygame.draw.rect(screen, (109,162,255), (1088-4,0,4,1024))
@@ -1623,8 +1626,11 @@ while go:
 								selected_algorithm = 1
 
 							elif dijkstrabutton.rect.collidepoint(event.pos) and not algo_started:
-								selected_algorithm = 3
+								selected_algorithm = 2
 
+							elif astarbutton.rect.collidepoint(event.pos) and not algo_started:
+								selected_algorithm = 3
+								
 							"""
 							elif playbutton.rect.collidepoint(event.pos):
 								if startplaced and goalplaced:
