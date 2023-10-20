@@ -372,15 +372,15 @@ crossimg = pygame.transform.scale(pygame.image.load("graphics/cross.png"),(32,32
 confirmimg = pygame.image.load("graphics/continue.png")
 cancelimg = pygame.image.load("graphics/cancel.png")
 okimg = pygame.image.load("graphics/ok.png")
-clear_matrix_popup = PopupButton(512,128,500,300,crossimg,False,"clear_grid","clear_matrix_popup",confirmimg,cancelimg)
+clear_matrix_popup = PopupButton(512,128,500,400,crossimg,False,"clear_grid","clear_matrix_popup",confirmimg,cancelimg)
 clear_matrix_popup.reset()
-build_help_popup = PopupOneButton(512,128,600,700,crossimg,False,"build_help","build_help_popup",okimg)
+build_help_popup = PopupOneButton(512,128,600,600,crossimg,False,"build_help","build_help_popup",okimg)
 build_help_popup.reset()
-algo_help_popup = PopupOneButton(512,128,600,700,crossimg,False,"algo_help","algo_help_popup",okimg)
+algo_help_popup = PopupOneButton(512,128,600,400,crossimg,False,"algo_help","algo_help_popup",okimg)
 algo_help_popup.reset()
-start_goal_placed_popup = PopupOneButton(512,128,500,300,crossimg,False,"startgoal_placed","start_goal_placed_popup",okimg)
+start_goal_placed_popup = PopupOneButton(512,128,500,400,crossimg,False,"startgoal_placed","start_goal_placed_popup",okimg)
 start_goal_placed_popup.reset()
-matrix_wrong_size_popup = PopupButton(512,128,600,500,crossimg,False,"wrong_size","wrong_size_popup",confirmimg,cancelimg)
+matrix_wrong_size_popup = PopupButton(512,128,600,400,crossimg,False,"wrong_size","wrong_size_popup",confirmimg,cancelimg)
 matrix_wrong_size_popup.reset()
 change_gridsize_popup = PopupGridSize(512,128,600,500,crossimg,False,"change_size","change_size_popup",confirmimg,cancelimg,font_big)
 change_gridsize_popup.reset()
@@ -447,10 +447,13 @@ heapq.heapify(dijkastarheap)
 
 all_text = {
 	"clear_grid":"Do you really want to \nclear the grid?\nThis action cannot be undone!",
-	"build_help":"Hier steht irgendwann mal eine Anleitung zum Programm. Bleibt gespannt!!!!!",
-	"algo_help":"Hier steht irgendwann mal eine Anleitung zum Algostuff. Bleibt gespannt!!!!!",
+	"build_help":
+	"Build a level by placing walls, the start tile and the goal tile!\n"
+	"You can draw lines of wall by holding down middle mouse button.\n"
+	"Run your level by clicking on the button in the top right corner. ",
+	"algo_help":"Select an alogrithm at the bottom and hit play to solve the maze!",
 	"startgoal_placed":"You need to place the start tile and the goal tile before you can switch into algo-mode!",
-	"wrong_size":"The level you loaded doesn't match the size of the grid. Parts of the level might be cropped out. Do you want to continue?",
+	"wrong_size":"Your grid size will the adjusted to match your loaded level. Do you want to continue?",
 	"change_size":"Change size placeholder"
 }
 
@@ -1039,13 +1042,13 @@ def drawselectionbox(selected):
 #The param selected is an integer that indicates how many squares the box has to go up from the bottom
 #selected = 1 -> Box around lowest button, 2 -> Box around second lowest button...
 	#Upper bar
-	pygame.draw.rect(screen, (210,210,210), (1024,1024-(selected*64),64,3))
+	pygame.draw.rect(screen, (136,195,232), (1024,1024-(selected*64),64,3))
 	#Lower bar
-	pygame.draw.rect(screen, (210,210,210), (1024,1024-((selected-1)*64)-3,64,3))
+	pygame.draw.rect(screen, (136,195,232), (1024,1024-((selected-1)*64)-3,64,3))
 	#Left bar
-	pygame.draw.rect(screen, (210,210,210), (1024,1024-(selected*64),3,64))
+	pygame.draw.rect(screen, (136,195,232), (1024,1024-(selected*64),3,64))
 
-	pygame.draw.rect(screen, (210,210,210), (1085,1024-(selected*64),3,64))
+	pygame.draw.rect(screen, (136,195,232), (1085,1024-(selected*64),3,64))
 
 
 def naiveline(point1,point2):
